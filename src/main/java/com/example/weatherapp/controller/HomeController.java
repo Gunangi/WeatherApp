@@ -6,8 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class HomeController {
 
-    @GetMapping("/index")
+    @GetMapping({"/", "/index"})
     public String homePage() {
-        return "index"; // Make sure weather.html exists inside templates/
+        return "redirect:/index.html"; // Static HTML under /static
     }
 }
