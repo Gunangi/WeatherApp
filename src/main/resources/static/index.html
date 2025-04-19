@@ -1,0 +1,241 @@
+<!-- src/main/resources/static/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeatherSense - Smart Weather Application</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../static/style.css">
+    <!-- Open Graph tags for sharing -->
+    <meta property="og:title" content="WeatherSense - Smart Weather Application">
+    <meta property="og:description" content="Get real-time weather updates, forecasts, and personalized recommendations.">
+    <meta property="og:image" content="../static/images/weathersense-preview.jpg">
+</head>
+<body>
+<div class="loading">
+    <div class="spinner"></div>
+</div>
+
+<div class="container">
+    <header>
+        <div class="logo">
+            <i class="fas fa-cloud-sun"></i>
+            <span>WeatherSense</span>
+        </div>
+        <div class="user-actions">
+            <span class="username">Welcome, <span id="current-user">User</span></span>
+            <button id="settingsBtn" class="settings-btn" type="button">
+                <i class="fas fa-cog"></i>
+            </button>
+            <form action="/logout" method="post">
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+        </div>
+    </header>
+
+    <main>
+        <section class="search-section">
+            <div class="search-bar">
+                <label for="cityInput"></label><input type="text" id="cityInput" placeholder="Search for a city..." autocomplete="off">
+                <button id="searchBtn" class="search-btn">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+            <div class="recent-searches">
+                <span style="color:#777;margin-right:5px;">Recent:</span>
+                <!-- Will be populated dynamically -->
+            </div>
+            <!-- New city comparison feature -->
+            <div class="comparison-controls">
+                <button id="compareBtn" class="compare-btn">
+                    <i class="fas fa-balance-scale"></i> Compare Cities
+                </button>
+                <div id="comparisonCities" class="comparison-cities">
+                    <!-- Will be populated when comparison mode is active -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Weather alerts banner -->
+        <div id="alertsBanner" class="alerts-banner hidden">
+            <!-- Weather alerts will appear here -->
+        </div>
+
+        <div id="weatherResult" class="weather-cards">
+            <!-- Weather results will be displayed here -->
+        </div>
+
+        <!-- City comparison container -->
+        <div id="cityComparisonContainer" class="city-comparison hidden">
+            <!-- City comparison will be rendered here -->
+        </div>
+
+        <!-- Hourly forecast section -->
+        <section id="hourlyForecastSection" class="hourly-forecast-section">
+            <h2 class="section-title">Hourly Forecast</h2>
+            <div id="hourlyForecastContainer" class="hourly-forecast-container">
+                <!-- Hourly forecast will be rendered here -->
+            </div>
+        </section>
+
+        <!-- Air pollution section -->
+        <div id="airPollutionContainer" class="pollution-section">
+            <!-- Air pollution will be rendered here -->
+        </div>
+
+        <!-- Weather impact information -->
+        <div id="weatherImpactContainer" class="impact-section">
+            <!-- Weather impact information will be rendered here -->
+        </div>
+
+        <!-- Recommendations section -->
+        <div id="recommendationsContainer" class="recommendations-section">
+            <!-- Recommendations will be rendered here -->
+        </div>
+
+        <section class="forecast-section">
+            <h2 class="section-title">Extended Forecast</h2>
+            <div class="forecast-controls">
+                <button class="forecast-toggle active" data-days="5">5-Day</button>
+                <button class="forecast-toggle" data-days="7">7-Day</button>
+                <button class="forecast-toggle" data-days="10">10-Day</button>
+                <button class="forecast-toggle" data-days="14">14-Day</button>
+            </div>
+            <div id="forecastResult" class="forecast-days">
+                <!-- Forecast data will be displayed here -->
+            </div>
+        </section>
+
+        <!-- Historical data section -->
+        <section id="historicalSection" class="historical-section">
+            <h2 class="section-title">Historical Weather</h2>
+            <div class="historical-controls">
+                <button class="historical-toggle active" data-period="weekly">Weekly</button>
+                <button class="historical-toggle" data-period="monthly">Monthly</button>
+                <button class="historical-toggle" data-period="yearly">Yearly</button>
+            </div>
+            <div id="historicalDataContainer" class="historical-data">
+                <!-- Historical data will be rendered here -->
+            </div>
+        </section>
+
+        <!-- Social sharing section -->
+        <section class="social-section">
+            <h2 class="section-title">Share & Community</h2>
+            <div class="sharing-options">
+                <button class="share-btn" data-platform="facebook">
+                    <i class="fab fa-facebook"></i> Share
+                </button>
+                <button class="share-btn" data-platform="twitter">
+                    <i class="fab fa-twitter"></i> Tweet
+                </button>
+                <button class="share-btn" data-platform="email">
+                    <i class="fas fa-envelope"></i> Email
+                </button>
+            </div>
+            <div id="communityReportsContainer" class="community-reports">
+                <!-- Community weather reports will be rendered here -->
+            </div>
+            <button id="addReportBtn" class="add-report-btn">
+                <i class="fas fa-plus"></i> Add Your Weather Report
+            </button>
+        </section>
+
+        <section class="map-section">
+            <h2 class="section-title">Weather Map</h2>
+            <div class="map-controls">
+                <button class="map-layer-toggle active" data-layer="temperature">Temperature</button>
+                <button class="map-layer-toggle" data-layer="precipitation">Precipitation</button>
+                <button class="map-layer-toggle" data-layer="wind">Wind</button>
+                <button class="map-layer-toggle" data-layer="clouds">Clouds</button>
+            </div>
+            <div id="weather-map">
+                <!-- Map will be rendered here -->
+            </div>
+        </section>
+
+        <!-- Weather widgets section -->
+        <section class="widgets-section">
+            <h2 class="section-title">Weather Widgets</h2>
+            <div class="widget-preview-container">
+                <div id="widgetPreview" class="widget-preview">
+                    <!-- Widget preview will be rendered here -->
+                </div>
+                <div class="widget-controls">
+                    <button id="customizeWidgetBtn" class="customize-widget-btn">
+                        <i class="fas fa-sliders-h"></i> Customize
+                    </button>
+                    <button id="getWidgetCodeBtn" class="get-widget-code-btn">
+                        <i class="fas fa-code"></i> Get Code
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>© 2025 WeatherSense. All rights reserved.</p>
+            <div class="footer-links">
+                <a href="#">Terms of Service</a>
+                <a href="#">Privacy Policy</a>
+                <a href="#">Contact Us</a>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<!-- Settings Modal Container -->
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <div id="settingsContainer"></div>
+    </div>
+</div>
+
+<!-- Comparison Modal Container -->
+<div id="comparisonModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <div id="citySelectionContainer"></div>
+    </div>
+</div>
+
+<!-- Weather Report Modal Container -->
+<div id="reportModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <div id="weatherReportContainer"></div>
+    </div>
+</div>
+
+<!-- Widget Customization Modal Container -->
+<div id="widgetModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <div id="widgetCustomizationContainer"></div>
+    </div>
+</div>
+
+<!-- Notification permission modal -->
+<div id="notificationModal" class="modal">
+    <div class="modal-content notification-modal">
+        <span class="close-modal">&times;</span>
+        <h2>Enable Weather Notifications</h2>
+        <p>Get timely alerts about severe weather conditions and daily forecasts.</p>
+        <div class="notification-buttons">
+            <button id="enableNotificationsBtn" class="primary-btn">Enable Notifications</button>
+            <button id="skipNotificationsBtn" class="secondary-btn">Maybe Later</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script src="vendor.js"></script>
+<script src="app.jsx"></script>
+<script src="weather.js"></script>
+</body>
+</html>
