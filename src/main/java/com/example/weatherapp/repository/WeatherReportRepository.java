@@ -9,10 +9,21 @@ import java.util.List;
 
 @Repository
 public interface WeatherReportRepository extends MongoRepository<WeatherReport, String> {
+    // Find reports by location, sorted by creation time (most recent first)
     List<WeatherReport> findByLocationOrderByCreatedAtDesc(String location);
+
+    // Find reports by user ID, sorted by creation time (most recent first)
     List<WeatherReport> findByUserIdOrderByCreatedAtDesc(String userId);
 
-    // Add MongoDB geospatial query to find reports within radius
-    @Query("{'location': {$near: {$geometry: {type: 'Point', coordinates: [?0, ?1]}, $maxDistance: ?2}}}")
-    List<WeatherReport> findNearbyReports(double lon, double lat, double radius);
+    // Geospatial query to find nearby reports within a given radius
+    @Query("{ 'location_coordinates': { " +
+            "$near: { " +
+            "   $geometry: { " +
+            "       type: 'Point', " +
+            "       coordinates: [?0, ?1] " +
+            "   }, " +
+            "   $maxDistance: ?2 " +
+            "} " +
+            "}}")
+    List<WeatherReport> findNearbyReports(double longitude, double latitude, double radius);
 }

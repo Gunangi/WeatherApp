@@ -4,6 +4,7 @@ import com.example.weatherapp.model.WeatherAlert;
 import com.example.weatherapp.model.WeatherReport;
 import com.example.weatherapp.repository.WeatherAlertRepository;
 import com.example.weatherapp.repository.WeatherReportRepository;
+import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,7 +17,11 @@ public class WeatherService {
     private final WeatherReportRepository reportRepository;
     private final WeatherApiService weatherApiService;
 
-    public WeatherService(WeatherAlertRepository alertRepository, WeatherReportRepository reportRepository, WeatherApiService weatherApiService) {
+    public WeatherService(
+            WeatherAlertRepository alertRepository,
+            WeatherReportRepository reportRepository,
+            WeatherApiService weatherApiService
+    ) {
         this.alertRepository = alertRepository;
         this.reportRepository = reportRepository;
         this.weatherApiService = weatherApiService;
@@ -37,7 +42,6 @@ public class WeatherService {
                 .orElseThrow(() -> new RuntimeException("Alert not found"));
 
         alert.setCity(alertDetails.getCity());
-
         alert.setActive(alertDetails.isActive());
 
         return alertRepository.save(alert);
@@ -61,13 +65,33 @@ public class WeatherService {
     }
 
     public WeatherReport createReport(WeatherReport report) {
+        // Set creation time
         report.setCreatedAt(LocalDateTime.now());
+
+        // If coordinates are not set, attempt to geocode from location
+        if (report.getLocationCoordinates() == null && report.getLocation() != null) {
+            try {
+                // This is a placeholder - you'd replace with actual geocoding service
+                double[] coords = geocodeLocation(report.getLocation());
+                report.setLocationCoordinates(new GeoJsonPoint(coords[0], coords[1]));
+            } catch (Exception e) {
+                // Log error or handle geocoding failure
+            }
+        }
+
         return reportRepository.save(report);
     }
 
-    // Updated to match the repository method name
-    public List<WeatherReport> getNearbyReports(double lat, double lon, double radius) {
-        return reportRepository.findNearbyReports(lat, lon, radius);
+    public List<WeatherReport> getNearbyReports(double lon, double lat, double radius) {
+        // Radius is in meters
+        return reportRepository.findNearbyReports(lon, lat, radius);
+    }
+
+    // Placeholder geocoding method - replace with actual geocoding service
+    private double[] geocodeLocation(String location) {
+        // This is a mock implementation
+        // In a real application, use a geocoding service like Google Maps, OpenStreetMap, etc.
+        return new double[]{-122.4194, 37.7749}; // San Francisco coordinates as example
     }
 
     // Weather data methods

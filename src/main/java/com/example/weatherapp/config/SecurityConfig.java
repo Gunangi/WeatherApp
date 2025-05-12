@@ -4,11 +4,10 @@ import com.example.weatherapp.security.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.authentication.configurers.userdetails.DaoAuthenticationConfigurer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -26,13 +25,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())  // Disabling CSRF for API endpoints
+                .csrf(AbstractHttpConfigurer::disable)  // Disabling CSRF for API endpoints
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/login", "/perform_login", "/register", "/css/**", "/js/**",
                                 "/images/**", "/vendor.js", "/weather.js", "/weather-widget.js").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/widget-weather").permitAll()
-                        .requestMatchers("/api/auth/login", "/api/auth/register").permitAll() // Make sure authentication endpoints are accessible
+                        .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
@@ -60,11 +59,5 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public DaoAuthenticationConfigurer<AuthenticationManagerBuilder, CustomUserDetailsService> configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
-        return auth.userDetailsService(userDetailsService)
-                .passwordEncoder(passwordEncoder());
     }
 }

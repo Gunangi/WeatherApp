@@ -13,8 +13,6 @@ java {
     }
 }
 
-
-
 repositories {
     mavenCentral()
 }
@@ -27,11 +25,15 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-
+    implementation 'org.mongodb:mongodb-driver-sync'
+    implementation 'org.slf4j:slf4j-api'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     // WebClient for API calls
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
@@ -47,8 +49,12 @@ dependencies {
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo'
 }
 
 test {
     useJUnitPlatform()
+}
+configurations.all {
+    exclude group: 'de.flapdoodle.embed', module: 'de.flapdoodle.embed.mongo'
 }
