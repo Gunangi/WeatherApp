@@ -57,16 +57,6 @@ public class WeatherController {
         }
     }
 
-    @GetMapping("/forecast")
-    public ResponseEntity<?> getForecast(@RequestParam String city, @RequestParam(defaultValue = "5") int days) {
-        try {
-            Map<String, Object> forecast = weatherApiService.getForecast(city, days, logger, RestClientException);
-            return ResponseEntity.ok(forecast);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error fetching forecast: " + e.getMessage());
-        }
-    }
 
     @GetMapping("/forecast/hourly")
     public ResponseEntity<?> getHourlyForecast(
