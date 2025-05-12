@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class WeatherService {
@@ -99,14 +100,10 @@ public class WeatherService {
         return weatherApiService.getCurrentWeather(location);
     }
 
-    public Object getForecast(String location, int days) {
-        return weatherApiService.getForecast(location, days);
-    }
 
-    public Object getHourlyForecast(String location) {
-        return weatherApiService.getHourlyForecast(location);
+    public List<Map<String, Object>> getHourlyForecast(String location) {
+        return weatherApiService.getHourlyForecast(location, 12); // Default to 12 hours
     }
-
     public Object getAirPollution(double lat, double lon) {
         return weatherApiService.getAirPollution(lat, lon);
     }

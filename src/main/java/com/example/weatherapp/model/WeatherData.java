@@ -2,6 +2,7 @@ package com.example.weatherapp.model;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +29,8 @@ public class WeatherData {
     private int timezone;
 
     private List<Map<String, Object>> weather = new ArrayList<>();
+    private Map<String, Object> main = new HashMap<>();
+    private Map<String, Object> wind = new HashMap<>();
 
     private Map<String, Object> rain;
     private Map<String, Object> snow;
@@ -54,7 +57,34 @@ public class WeatherData {
         this.fetchedAt = LocalDateTime.now();
     }
 
-    // Getters and setters
+    // Add getWeather() method
+    public List<Map<String, Object>> getWeather() {
+        return weather;
+    }
+
+    public void setWeather(List<Map<String, Object>> weather) {
+        this.weather = weather;
+    }
+
+    // Add getMain() method
+    public Map<String, Object> getMain() {
+        return main;
+    }
+
+    public void setMain(Map<String, Object> main) {
+        this.main = main;
+    }
+
+    // Add getWind() method
+    public Map<String, Object> getWind() {
+        return wind;
+    }
+
+    public void setWind(Map<String, Object> wind) {
+        this.wind = wind;
+    }
+
+    // Existing getters and setters remain the same...
     public String getCity() {
         return city;
     }
@@ -87,195 +117,50 @@ public class WeatherData {
         this.longitude = longitude;
     }
 
-    public double getTemperature() {
-        return temperature;
+    // Additional helper methods for main data
+    public double getMainTemperature() {
+        Object temp = main.get("temp");
+        return temp instanceof Number ? ((Number) temp).doubleValue() : 0.0;
     }
 
-    public void setTemperature(double temperature) {
-        this.temperature = temperature;
+    public double getMainFeelsLike() {
+        Object feelsLike = main.get("feels_like");
+        return feelsLike instanceof Number ? ((Number) feelsLike).doubleValue() : 0.0;
     }
 
-    public double getFeelsLike() {
-        return feelsLike;
+    public double getMainTempMin() {
+        Object tempMin = main.get("temp_min");
+        return tempMin instanceof Number ? ((Number) tempMin).doubleValue() : 0.0;
     }
 
-    public void setFeelsLike(double feelsLike) {
-        this.feelsLike = feelsLike;
+    public double getMainTempMax() {
+        Object tempMax = main.get("temp_max");
+        return tempMax instanceof Number ? ((Number) tempMax).doubleValue() : 0.0;
     }
 
-    public double getTempMin() {
-        return tempMin;
+    public int getMainHumidity() {
+        Object humidity = main.get("humidity");
+        return humidity instanceof Number ? ((Number) humidity).intValue() : 0;
     }
 
-    public void setTempMin(double tempMin) {
-        this.tempMin = tempMin;
+    public int getMainPressure() {
+        Object pressure = main.get("pressure");
+        return pressure instanceof Number ? ((Number) pressure).intValue() : 0;
     }
 
-    public double getTempMax() {
-        return tempMax;
-    }
-
-    public void setTempMax(double tempMax) {
-        this.tempMax = tempMax;
-    }
-
-    public int getHumidity() {
-        return humidity;
-    }
-
-    public void setHumidity(int humidity) {
-        this.humidity = humidity;
-    }
-
-    public int getPressure() {
-        return pressure;
-    }
-
-    public void setPressure(int pressure) {
-        this.pressure = pressure;
-    }
-
+    // Helper methods for wind data
     public double getWindSpeed() {
-        return windSpeed;
-    }
-
-    public void setWindSpeed(double windSpeed) {
-        this.windSpeed = windSpeed;
+        Object speed = wind.get("speed");
+        return speed instanceof Number ? ((Number) speed).doubleValue() : 0.0;
     }
 
     public int getWindDegree() {
-        return windDegree;
-    }
-
-    public void setWindDegree(int windDegree) {
-        this.windDegree = windDegree;
+        Object deg = wind.get("deg");
+        return deg instanceof Number ? ((Number) deg).intValue() : 0;
     }
 
     public double getWindGust() {
-        return windGust;
-    }
-
-    public void setWindGust(double windGust) {
-        this.windGust = windGust;
-    }
-
-    public int getClouds() {
-        return clouds;
-    }
-
-    public void setClouds(int clouds) {
-        this.clouds = clouds;
-    }
-
-    public int getVisibility() {
-        return visibility;
-    }
-
-    public void setVisibility(int visibility) {
-        this.visibility = visibility;
-    }
-
-    public long getSunrise() {
-        return sunrise;
-    }
-
-    public void setSunrise(long sunrise) {
-        this.sunrise = sunrise;
-    }
-
-    public long getSunset() {
-        return sunset;
-    }
-
-    public void setSunset(long sunset) {
-        this.sunset = sunset;
-    }
-
-    public long getDt() {
-        return dt;
-    }
-
-    public void setDt(long dt) {
-        this.dt = dt;
-    }
-
-    public int getTimezone() {
-        return timezone;
-    }
-
-    public void setTimezone(int timezone) {
-        this.timezone = timezone;
-    }
-
-    public List<Map<String, Object>> getWeather() {
-        return weather;
-    }
-
-    public void setWeather(List<Map<String, Object>> weather) {
-        this.weather = weather;
-    }
-
-    public Map<String, Object> getRain() {
-        return rain;
-    }
-
-    public void setRain(Map<String, Object> rain) {
-        this.rain = rain;
-    }
-
-    public Map<String, Object> getSnow() {
-        return snow;
-    }
-
-    public void setSnow(Map<String, Object> snow) {
-        this.snow = snow;
-    }
-
-    public Map<String, Object> getAirQuality() {
-        return airQuality;
-    }
-
-    public void setAirQuality(Map<String, Object> airQuality) {
-        this.airQuality = airQuality;
-    }
-
-    public List<Map<String, Object>> getHourlyForecast() {
-        return hourlyForecast;
-    }
-
-    public void setHourlyForecast(List<Map<String, Object>> hourlyForecast) {
-        this.hourlyForecast = hourlyForecast;
-    }
-
-    public List<Map<String, Object>> getDailyForecast() {
-        return dailyForecast;
-    }
-
-    public void setDailyForecast(List<Map<String, Object>> dailyForecast) {
-        this.dailyForecast = dailyForecast;
-    }
-
-    public List<Map<String, Object>> getHistoricalData() {
-        return historicalData;
-    }
-
-    public void setHistoricalData(List<Map<String, Object>> historicalData) {
-        this.historicalData = historicalData;
-    }
-
-    public List<Map<String, Object>> getAlerts() {
-        return alerts;
-    }
-
-    public void setAlerts(List<Map<String, Object>> alerts) {
-        this.alerts = alerts;
-    }
-
-    public LocalDateTime getFetchedAt() {
-        return fetchedAt;
-    }
-
-    public void setFetchedAt(LocalDateTime fetchedAt) {
-        this.fetchedAt = fetchedAt;
+        Object gust = wind.get("gust");
+        return gust instanceof Number ? ((Number) gust).doubleValue() : 0.0;
     }
 }

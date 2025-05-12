@@ -3,11 +3,9 @@ package com.example.weatherapp.controller;
 import com.example.weatherapp.model.WeatherAlert;
 import com.example.weatherapp.model.WeatherData;
 import com.example.weatherapp.model.WeatherReport;
-import com.example.weatherapp.repository.WeatherAlertRepository;
 import com.example.weatherapp.repository.WeatherReportRepository;
 import com.example.weatherapp.service.WeatherApiService;
 import com.example.weatherapp.service.WeatherService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,18 +21,16 @@ import java.util.Map;
 public class WeatherController {
 
     private final WeatherService weatherService;
-
     private final WeatherApiService weatherApiService;
-
     private final WeatherReportRepository weatherReportRepository;
 
-    private final WeatherAlertRepository weatherAlertRepository;
-
-    public WeatherController(WeatherService weatherService, WeatherApiService weatherApiService, WeatherReportRepository weatherReportRepository, WeatherAlertRepository weatherAlertRepository) {
+    public WeatherController(
+            WeatherService weatherService,
+            WeatherApiService weatherApiService,
+            WeatherReportRepository weatherReportRepository) {
         this.weatherService = weatherService;
         this.weatherApiService = weatherApiService;
         this.weatherReportRepository = weatherReportRepository;
-        this.weatherAlertRepository = weatherAlertRepository;
     }
 
     @GetMapping("/current")
@@ -64,7 +60,7 @@ public class WeatherController {
     @GetMapping("/forecast")
     public ResponseEntity<?> getForecast(@RequestParam String city, @RequestParam(defaultValue = "5") int days) {
         try {
-            Map<String, Object> forecast = weatherApiService.getForecast(city, days);
+            Map<String, Object> forecast = weatherApiService.getForecast(city, days, logger, RestClientException);
             return ResponseEntity.ok(forecast);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -100,7 +96,7 @@ public class WeatherController {
         }
     }
 
-    @GetMapping("/airpollution")
+    @GetMapping("/air-pollution")
     public ResponseEntity<?> getAirPollution(@RequestParam double lat, @RequestParam double lon) {
         try {
             Map<String, Object> airPollutionData = weatherApiService.getAirPollution(lat, lon);
