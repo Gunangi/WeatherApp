@@ -1,5 +1,6 @@
 package com.example.weatherapp;
 
+import com.example.weatherapp.config.OpenWeatherMapConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,15 +17,9 @@ class WeatherAppApplicationTests {
 
     @Test
     void contextLoads() {
-        // Verify RestTemplate bean is created
+        // Verify essential beans are created
         assertThat(context.getBean(RestTemplate.class)).isNotNull();
-
-        // Print out all bean names for debugging
-        String[] beanNames = context.getBeanDefinitionNames();
-        System.out.println("Beans loaded:");
-        for (String beanName : beanNames) {
-            System.out.println(beanName);
-        }
+        assertThat(context.getBean(OpenWeatherMapConfig.class)).isNotNull();
     }
 
     @Test
