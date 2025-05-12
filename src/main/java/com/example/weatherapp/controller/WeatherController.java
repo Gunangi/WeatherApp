@@ -1,292 +1,195 @@
 package com.example.weatherapp.controller;
 
-
-import com.example.weatherapp.model.SavedLocation;
-import com.example.weatherapp.model.User;
-import com.example.weatherapp.model.UserPreferences.TemperatureUnit;
-import com.example.weatherapp.service.SavedLocationService;
-import com.example.weatherapp.service.UserService;
+import com.example.weatherapp.model.WeatherAlert;
+import com.example.weatherapp.model.WeatherData;
+import com.example.weatherapp.model.WeatherReport;
+import com.example.weatherapp.repository.WeatherAlertRepository;
+import com.example.weatherapp.repository.WeatherReportRepository;
+import com.example.weatherapp.service.WeatherApiService;
 import com.example.weatherapp.service.WeatherService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/weather")
+@RequestMapping("/api/weather")
 public class WeatherController {
 
     private final WeatherService weatherService;
-    private final UserService userService;
-    private final SavedLocationService locationService;
 
-    public WeatherController(WeatherService weatherService, UserService userService, SavedLocationService locationService) {
+    private final WeatherApiService weatherApiService;
+
+    private final WeatherReportRepository weatherReportRepository;
+
+    private final WeatherAlertRepository weatherAlertRepository;
+
+    public WeatherController(WeatherService weatherService, WeatherApiService weatherApiService, WeatherReportRepository weatherReportRepository, WeatherAlertRepository weatherAlertRepository) {
         this.weatherService = weatherService;
-        this.userService = userService;
-        this.locationService = locationService;
+        this.weatherApiService = weatherApiService;
+        this.weatherReportRepository = weatherReportRepository;
+        this.weatherAlertRepository = weatherAlertRepository;
     }
 
     @GetMapping("/current")
-    public ResponseEntity<Map<String, Object>> getCurrentWeather(
-            @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lon,
-            @RequestParam(required = false) Long locationId,
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        // Determine coordinates to use
-        double latitude;
-        double longitude;
-
-        if (locationId != null) {
-            // Use saved location
-            SavedLocation location = locationService.getLocationById(locationId);
-            latitude = location.getLatitude();
-            longitude = location.getLongitude();
-        } else if (lat != null && lon != null) {
-            // Use provided coordinates
-            latitude = lat;
-            longitude = lon;
-        } else {
-            // Use default location for user if authenticated
-            if (userDetails != null) {
-                User user = userService.getUserByUsername(userDetails.getUsername());
-                SavedLocation defaultLocation = locationService.getDefaultLocation(user);
-                latitude = defaultLocation.getLatitude();
-                longitude = defaultLocation.getLongitude();
-            } else {
-                // Default coordinates if no user or location provided
-                latitude = 40.7128; // New York City
-                longitude = -74.0060;
-            }
+    public ResponseEntity<?> getCurrentWeather(@RequestParam String city) {
+        try {
+            WeatherData weatherData = weatherApiService.getCurrentWeather(city);
+            return ResponseEntity.ok(weatherData);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fetching current weather: " + e.getMessage());
         }
+    }
 
-        // Determine temperature unit
-        TemperatureUnit unit = TemperatureUnit.CELSIUS;
-        if (userDetails != null) {
-            User user = userService.getUserByUsername(userDetails.getUsername());
-            unit = user.getPreferences() != null ? user.getPreferences().getTemperatureUnit() : TemperatureUnit.CELSIUS;
+    @GetMapping("/coordinates")
+    public ResponseEntity<?> getWeatherByCoordinates(
+            @RequestParam double lat,
+            @RequestParam double lon) {
+        try {
+            WeatherData weatherData = weatherApiService.getWeatherByCoordinates(lat, lon);
+            return ResponseEntity.ok(weatherData);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fetching weather by coordinates: " + e.getMessage());
         }
-
-        Map<String, Object> weatherData = weatherService.getCurrentWeather(latitude, longitude, unit);
-        return ResponseEntity.ok(weatherData);
     }
 
     @GetMapping("/forecast")
-    public ResponseEntity<Map<String, Object>> getForecast(
-            @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lon,
-            @RequestParam(required = false) Long locationId,
-            @RequestParam(required = false) Integer days,
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        // Determine coordinates to use (similar to getCurrentWeather)
-        double latitude;
-        double longitude;
-
-        if (locationId != null) {
-            SavedLocation location = locationService.getLocationById(locationId);
-            latitude = location.getLatitude();
-            longitude = location.getLongitude();
-        } else if (lat != null && lon != null) {
-            latitude = lat;
-            longitude = lon;
-        } else {
-            if (userDetails != null) {
-                User user = userService.getUserByUsername(userDetails.getUsername());
-                SavedLocation defaultLocation = locationService.getDefaultLocation(user);
-                latitude = defaultLocation.getLatitude();
-                longitude = defaultLocation.getLongitude();
-            } else {
-                latitude = 40.7128;
-                longitude = -74.0060;
-            }
+    public ResponseEntity<?> getForecast(@RequestParam String city, @RequestParam(defaultValue = "5") int days) {
+        try {
+            Map<String, Object> forecast = weatherApiService.getForecast(city, days);
+            return ResponseEntity.ok(forecast);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fetching forecast: " + e.getMessage());
         }
-
-        // Determine forecast days and temperature unit
-        int forecastDays = days != null ? days : 5;
-        TemperatureUnit unit = TemperatureUnit.CELSIUS;
-
-        if (userDetails != null) {
-            User user = userService.getUserByUsername(userDetails.getUsername());
-            if (user.getPreferences() != null) {
-                if (days == null) {
-                    forecastDays = user.getPreferences().getForecastDays();
-                }
-                unit = user.getPreferences().getTemperatureUnit();
-            }
-        }
-
-        Map<String, Object> forecastData = weatherService.getForecast(latitude, longitude, forecastDays, unit);
-        return ResponseEntity.ok(forecastData);
     }
 
-    @GetMapping("/hourly")
-    public ResponseEntity<Map<String, Object>> getHourlyForecast(
-            @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lon,
-            @RequestParam(required = false) Long locationId,
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        // Determine coordinates (similar logic as above)
-        double latitude;
-        double longitude;
-
-        if (locationId != null) {
-            SavedLocation location = locationService.getLocationById(locationId);
-            latitude = location.getLatitude();
-            longitude = location.getLongitude();
-        } else if (lat != null && lon != null) {
-            latitude = lat;
-            longitude = lon;
-        } else {
-            if (userDetails != null) {
-                User user = userService.getUserByUsername(userDetails.getUsername());
-                SavedLocation defaultLocation = locationService.getDefaultLocation(user);
-                latitude = defaultLocation.getLatitude();
-                longitude = defaultLocation.getLongitude();
-            } else {
-                latitude = 40.7128;
-                longitude = -74.0060;
-            }
+    @GetMapping("/forecast/hourly")
+    public ResponseEntity<?> getHourlyForecast(
+            @RequestParam double lat,
+            @RequestParam double lon,
+            @RequestParam(defaultValue = "24") int hours) {
+        try {
+            List<Map<String, Object>> hourlyForecast = weatherApiService.getHourlyForecast(lat, lon, hours);
+            return ResponseEntity.ok(hourlyForecast);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fetching hourly forecast: " + e.getMessage());
         }
-
-        // Determine temperature unit
-        TemperatureUnit unit = TemperatureUnit.CELSIUS;
-        if (userDetails != null) {
-            User user = userService.getUserByUsername(userDetails.getUsername());
-            unit = user.getPreferences() != null ? user.getPreferences().getTemperatureUnit() : TemperatureUnit.CELSIUS;
-        }
-
-        Map<String, Object> hourlyData = weatherService.getHourlyForecast(latitude, longitude, unit);
-        return ResponseEntity.ok(hourlyData);
-    }
-
-    @GetMapping("/air-quality")
-    public ResponseEntity<Map<String, Object>> getAirQuality(
-            @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lon,
-            @RequestParam(required = false) Long locationId,
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        // Determine coordinates (similar logic as above)
-        double latitude;
-        double longitude;
-
-        if (locationId != null) {
-            SavedLocation location = locationService.getLocationById(locationId);
-            latitude = location.getLatitude();
-            longitude = location.getLongitude();
-        } else if (lat != null && lon != null) {
-            latitude = lat;
-            longitude = lon;
-        } else {
-            if (userDetails != null) {
-                User user = userService.getUserByUsername(userDetails.getUsername());
-                SavedLocation defaultLocation = locationService.getDefaultLocation(user);
-                latitude = defaultLocation.getLatitude();
-                longitude = defaultLocation.getLongitude();
-            } else {
-                latitude = 40.7128;
-                longitude = -74.0060;
-            }
-        }
-
-        Map<String, Object> airQualityData = weatherService.getAirQuality(latitude, longitude);
-        return ResponseEntity.ok(airQualityData);
-    }
-
-    @GetMapping("/uv-index")
-    public ResponseEntity<Map<String, Object>> getUVIndex(
-            @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lon,
-            @RequestParam(required = false) Long locationId,
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        // Determine coordinates (similar logic as above)
-        double latitude;
-        double longitude;
-
-        if (locationId != null) {
-            SavedLocation location = locationService.getLocationById(locationId);
-            latitude = location.getLatitude();
-            longitude = location.getLongitude();
-        } else if (lat != null && lon != null) {
-            latitude = lat;
-            longitude = lon;
-        } else {
-            if (userDetails != null) {
-                User user = userService.getUserByUsername(userDetails.getUsername());
-                SavedLocation defaultLocation = locationService.getDefaultLocation(user);
-                latitude = defaultLocation.getLatitude();
-                longitude = defaultLocation.getLongitude();
-            } else {
-                latitude = 40.7128;
-                longitude = -74.0060;
-            }
-        }
-
-        Map<String, Object> uvData = weatherService.getUVIndex(latitude, longitude);
-        return ResponseEntity.ok(uvData);
     }
 
     @GetMapping("/historical")
-    public ResponseEntity<Map<String, Object>> getHistoricalWeather(
-            @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lon,
-            @RequestParam(required = false) Long locationId,
-            @RequestParam String date,
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        // Determine coordinates (similar logic as above)
-        double latitude;
-        double longitude;
-
-        if (locationId != null) {
-            SavedLocation location = locationService.getLocationById(locationId);
-            latitude = location.getLatitude();
-            longitude = location.getLongitude();
-        } else if (lat != null && lon != null) {
-            latitude = lat;
-            longitude = lon;
-        } else {
-            if (userDetails != null) {
-                User user = userService.getUserByUsername(userDetails.getUsername());
-                SavedLocation defaultLocation = locationService.getDefaultLocation(user);
-                latitude = defaultLocation.getLatitude();
-                longitude = defaultLocation.getLongitude();
-            } else {
-                latitude = 40.7128;
-                longitude = -74.0060;
-            }
+    public ResponseEntity<?> getHistoricalWeather(
+            @RequestParam double lat,
+            @RequestParam double lon,
+            @RequestParam String period) {
+        try {
+            Map<String, Object> historicalData = weatherApiService.getHistoricalWeather(lat, lon, period);
+            return ResponseEntity.ok(historicalData);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fetching historical weather: " + e.getMessage());
         }
-
-        // Parse date and determine temperature unit
-        LocalDate historicalDate = LocalDate.parse(date);
-        TemperatureUnit unit = TemperatureUnit.CELSIUS;
-
-        if (userDetails != null) {
-            User user = userService.getUserByUsername(userDetails.getUsername());
-            unit = user.getPreferences() != null ? user.getPreferences().getTemperatureUnit() : TemperatureUnit.CELSIUS;
-        }
-
-        Map<String, Object> historicalData = weatherService.getHistoricalWeather(latitude, longitude, historicalDate, unit);
-        return ResponseEntity.ok(historicalData);
     }
 
-    @GetMapping("/location/search")
-    public ResponseEntity<Map<String, Object>> searchLocation(@RequestParam String query) {
-        Map<String, Object> locations = weatherService.geocodeLocation(query);
-        return ResponseEntity.ok(locations);
+    @GetMapping("/airpollution")
+    public ResponseEntity<?> getAirPollution(@RequestParam double lat, @RequestParam double lon) {
+        try {
+            Map<String, Object> airPollutionData = weatherApiService.getAirPollution(lat, lon);
+            return ResponseEntity.ok(airPollutionData);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fetching air pollution data: " + e.getMessage());
+        }
     }
 
-    @GetMapping("/location/reverse")
-    public ResponseEntity<Map<String, Object>> reverseGeocode(
-            @RequestParam Double lat,
-            @RequestParam Double lon) {
-        Map<String, Object> location = weatherService.reverseGeocode(lat, lon);
-        return ResponseEntity.ok(location);
+    @GetMapping("/alerts")
+    public ResponseEntity<?> getWeatherAlerts(@RequestParam double lat, @RequestParam double lon) {
+        try {
+            List<WeatherAlert> alerts = weatherApiService.getWeatherAlerts(lat, lon);
+            return ResponseEntity.ok(alerts);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fetching weather alerts: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/compare")
+    public ResponseEntity<?> compareCities(@RequestParam List<String> cities) {
+        try {
+            List<Map<String, Object>> comparisonData = weatherApiService.compareCities(cities);
+            return ResponseEntity.ok(comparisonData);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error comparing cities: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/recommendations")
+    public ResponseEntity<?> getWeatherRecommendations(@RequestParam double lat, @RequestParam double lon) {
+        try {
+            Map<String, Object> recommendations = weatherApiService.getWeatherRecommendations(lat, lon);
+            return ResponseEntity.ok(recommendations);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error generating recommendations: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/reports")
+    public ResponseEntity<?> submitWeatherReport(@RequestBody WeatherReport report) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            report.setUsername(username);
+
+            WeatherReport savedReport = weatherReportRepository.save(report);
+            return ResponseEntity.ok(savedReport);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error submitting weather report: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/reports")
+    public ResponseEntity<?> getCommunityReports(@RequestParam double lat, @RequestParam double lon, @RequestParam double radius) {
+        try {
+            List<WeatherReport> reports = weatherService.getNearbyReports(lat, lon, radius);
+            return ResponseEntity.ok(reports);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fetching community reports: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/widget")
+    public ResponseEntity<?> getWidgetData(@RequestParam String location) {
+        try {
+            Map<String, Object> widgetData = new HashMap<>();
+
+            // Get current weather for the location
+            WeatherData currentWeather = weatherApiService.getCurrentWeather(location);
+
+            // Create location info
+            Map<String, String> locationInfo = new HashMap<>();
+            locationInfo.put("name", currentWeather.getCity());
+            locationInfo.put("country", currentWeather.getCountry());
+
+            widgetData.put("location", locationInfo);
+            widgetData.put("current", currentWeather);
+
+            return ResponseEntity.ok(widgetData);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error generating widget data: " + e.getMessage());
+        }
     }
 }

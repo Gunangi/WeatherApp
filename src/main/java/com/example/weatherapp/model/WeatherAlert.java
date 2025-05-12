@@ -1,28 +1,69 @@
 package com.example.weatherapp.model;
 
+import java.time.LocalDateTime;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-
-import java.time.LocalDateTime;
 
 @Document(collection = "weather_alerts")
 public class WeatherAlert {
 
     @Id
     private String id;
-    private String username;
-    private String city;
-    private String alertType; // TEMPERATURE, WIND, RAIN, SNOW, AIR_QUALITY
-    private String condition; // ABOVE, BELOW, EQUALS
-    private double threshold;
-    private boolean isActive;
-    private LocalDateTime createdAt;
-    private LocalDateTime lastTriggeredAt;
 
-    // Constructors
+    private String userId;
+
+    private String city;
+
+    private double latitude;
+
+    private double longitude;
+
+    private String alertType; // e.g., "SEVERE_WEATHER", "STORM", "HEAVY_RAIN", etc.
+
+    private String alertSource; // e.g., "OPENWEATHERMAP", "SYSTEM", "USER_REPORT"
+
+    private String title;
+
+    private String description;
+
+    private LocalDateTime startTime;
+
+    private LocalDateTime endTime;
+
+    private String severity; // e.g., "WARNING", "WATCH", "ADVISORY"
+
+    private boolean active;
+
+    private LocalDateTime createdAt;
+
+    // Added missing fields
+    private String weatherCondition;
+    private double thresholdValue;
+
+    // Default constructor for MongoDB
     public WeatherAlert() {
         this.createdAt = LocalDateTime.now();
-        this.isActive = true;
+        this.active = true;
+    }
+
+    // Constructor with main fields
+    public WeatherAlert(String userId, String city, double latitude, double longitude,
+                        String alertType, String alertSource, String title, String description,
+                        LocalDateTime startTime, LocalDateTime endTime, String severity) {
+        this.userId = userId;
+        this.city = city;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.alertType = alertType;
+        this.alertSource = alertSource;
+        this.title = title;
+        this.description = description;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.severity = severity;
+        this.active = true;
+        this.createdAt = LocalDateTime.now();
     }
 
     // Getters and setters
@@ -34,12 +75,12 @@ public class WeatherAlert {
         this.id = id;
     }
 
-    public String getUsername() {
-        return username;
+    public String getUserId() {
+        return userId;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public String getCity() {
@@ -50,6 +91,22 @@ public class WeatherAlert {
         this.city = city;
     }
 
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(double latitude) {
+        this.latitude = latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(double longitude) {
+        this.longitude = longitude;
+    }
+
     public String getAlertType() {
         return alertType;
     }
@@ -58,28 +115,60 @@ public class WeatherAlert {
         this.alertType = alertType;
     }
 
-    public String getCondition() {
-        return condition;
+    public String getAlertSource() {
+        return alertSource;
     }
 
-    public void setCondition(String condition) {
-        this.condition = condition;
+    public void setAlertSource(String alertSource) {
+        this.alertSource = alertSource;
     }
 
-    public double getThreshold() {
-        return threshold;
+    public String getTitle() {
+        return title;
     }
 
-    public void setThreshold(double threshold) {
-        this.threshold = threshold;
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
+
+    public String getSeverity() {
+        return severity;
+    }
+
+    public void setSeverity(String severity) {
+        this.severity = severity;
     }
 
     public boolean isActive() {
-        return isActive;
+        return active;
     }
 
     public void setActive(boolean active) {
-        isActive = active;
+        this.active = active;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -90,47 +179,20 @@ public class WeatherAlert {
         this.createdAt = createdAt;
     }
 
-    public LocalDateTime getLastTriggeredAt() {
-        return lastTriggeredAt;
+    // Added missing getters and setters
+    public String getWeatherCondition() {
+        return weatherCondition;
     }
 
-    public void setLastTriggeredAt(LocalDateTime lastTriggeredAt) {
-        this.lastTriggeredAt = lastTriggeredAt;
+    public void setWeatherCondition(String weatherCondition) {
+        this.weatherCondition = weatherCondition;
     }
 
-    // Helper method to create description
-    public String getDescription() {
-        String conditionText = "";
-        switch (condition) {
-            case "ABOVE":
-                conditionText = "rises above";
-                break;
-            case "BELOW":
-                conditionText = "falls below";
-                break;
-            case "EQUALS":
-                conditionText = "equals";
-                break;
-        }
+    public double getThresholdValue() {
+        return thresholdValue;
+    }
 
-        String valueWithUnit = "";
-        switch (alertType) {
-            case "TEMPERATURE":
-                valueWithUnit = threshold + "°C";
-                break;
-            case "WIND":
-                valueWithUnit = threshold + " m/s";
-                break;
-            case "RAIN":
-            case "SNOW":
-                valueWithUnit = threshold + " mm";
-                break;
-            case "AIR_QUALITY":
-                valueWithUnit = String.valueOf((int) threshold);
-                break;
-        }
-
-        return "Alert when " + alertType.toLowerCase().replace('_', ' ') +
-                " in " + city + " " + conditionText + " " + valueWithUnit;
+    public void setThresholdValue(double thresholdValue) {
+        this.thresholdValue = thresholdValue;
     }
 }
