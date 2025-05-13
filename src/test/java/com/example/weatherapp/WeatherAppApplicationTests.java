@@ -1,6 +1,6 @@
 package com.example.weatherapp;
 
-import com.example.weatherapp.config.OpenWeatherMapConfig;
+import com.example.weatherapp.config.AppConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,7 +9,7 @@ import org.springframework.web.client.RestTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(classes = AppConfiguration.class)
 class WeatherAppApplicationTests {
 
     @Autowired
@@ -18,8 +18,8 @@ class WeatherAppApplicationTests {
     @Test
     void contextLoads() {
         // Verify essential beans are created
+        assertThat(context.getBean(AppConfiguration.class)).isNotNull();
         assertThat(context.getBean(RestTemplate.class)).isNotNull();
-        assertThat(context.getBean(OpenWeatherMapConfig.class)).isNotNull();
     }
 
     @Test

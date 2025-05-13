@@ -1,6 +1,6 @@
 package com.example.weatherapp.service;
 
-import com.example.weatherapp.config.OpenWeatherMapConfig;
+import com.example.weatherapp.config.AppConfiguration;
 import com.example.weatherapp.model.WeatherAlert;
 import com.example.weatherapp.model.WeatherData;
 import org.apache.logging.log4j.Logger;
@@ -26,11 +26,22 @@ public class WeatherApiService {
 
     private final String WEATHER_API_BASE_URL = "https://api.openweathermap.org/data/2.5";
 
+    private final RestTemplate restTemplate;
+    private final AppConfiguration appConfiguration;
     @Autowired
-    private OpenWeatherMapConfig weatherConfig;
+    public WeatherApiService(RestTemplate restTemplate, AppConfiguration appConfiguration) {
+        this.restTemplate = restTemplate;
+        this.appConfiguration = appConfiguration;
+    }
+    public String getWeatherByCity(String city) {
+        String url = UriComponentsBuilder.fromHttpUrl(appConfiguration.getBaseUrl())
+                .queryParam("q", city)
+                .queryParam("appid", appConfiguration.getApiKey())
+                .queryParam("units", "metric")
+                .toUriString();
 
-    @Autowired
-    private RestTemplate restTemplate;
+        return restTemplate.getForObject(url, String.class);
+    }
 
     // Current weather method implementation
     public WeatherData getCurrentWeather(String city) {
@@ -217,7 +228,7 @@ public class WeatherApiService {
     }
     // Overloaded method to get hourly forecast by city name
     public List<Map<String, Object>> getHourlyForecast(String location, int hours) {
-        // First, geocode the location to get coordinates
+        // Geocode the location to get coordinates
         String geoUrl = UriComponentsBuilder.fromHttpUrl("http://api.openweathermap.org/geo/1.0/direct")
                 .queryParam("q", location)
                 .queryParam("limit", "1")
@@ -238,14 +249,13 @@ public class WeatherApiService {
             throw new RuntimeException("Invalid location: " + location);
         }
 
-        // Extract lat/lon from the geocoding response
         Map<String, Object> geoData = geoResponseBody.get(0);
         double lat = ((Number) geoData.get("lat")).doubleValue();
         double lon = ((Number) geoData.get("lon")).doubleValue();
 
-        // Call the original method with lat and lon
         return getHourlyForecast(lat, lon, hours);
     }
+
 
     // Overloaded historical weather method to return Map
     public Map<String, Object> getHistoricalWeather(double lat, double lon, String period) {
