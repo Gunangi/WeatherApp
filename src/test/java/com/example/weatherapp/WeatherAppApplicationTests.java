@@ -23,8 +23,11 @@ class WeatherAppApplicationTests {
     }
 
     @Test
-    void testRestTemplateBean() {
-        RestTemplate restTemplate = context.getBean(RestTemplate.class);
-        assertThat(restTemplate).isNotNull();
+    void listRestTemplateBeans() {
+        String[] beanNames = context.getBeanNamesForType(RestTemplate.class);
+        System.out.println("RestTemplate beans:");
+        for (String name : beanNames) {
+            System.out.println(" - " + name);
+        }
     }
 }

@@ -17,13 +17,6 @@ import java.time.Duration;
 @Configuration
 @ComponentScan(basePackages = "com.example.weatherapp")
 public class WebConfig implements WebMvcConfigurer {
-    @Bean
-    @Primary
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder
-                .requestFactory(this::createRequestFactory)
-                .build();
-    }
 
     private SimpleClientHttpRequestFactory createRequestFactory() {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
