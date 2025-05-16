@@ -8,7 +8,9 @@ public class LoginController {
 
     @GetMapping("/login")
     public String login() {
-        return "login"; // returns login.html from src/main/resources/templates/
+        // Redirect to /login.html served from static folder
+        return "redirect:/login.html";
     }
 }
+
 

@@ -8,6 +8,8 @@ public class HomeController {
 
     @GetMapping("/")
     public String home() {
-        return "redirect:/login";
+        // Redirect to /login.html served from static folder
+        return "redirect:/login.html";
     }
 }
+
