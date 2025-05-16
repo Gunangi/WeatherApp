@@ -8,7 +8,13 @@ public class LoginController {
 
     @GetMapping("/login")
     public String login() {
-        // Redirect to /login.html served from static folder
+        // Since the file is in the static directory, we need to redirect to it
+        return "redirect:/login.html";
+    }
+
+    // Add a root mapping to redirect to login page
+    @GetMapping("/")
+    public String root() {
         return "redirect:/login.html";
     }
 }

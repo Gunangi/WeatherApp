@@ -6,10 +6,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class HomeController {
 
-    @GetMapping("/")
+    @GetMapping("/home")
     public String home() {
-        // Redirect to /login.html served from static folder
-        return "redirect:/login.html";
+        // Since the file is in the static directory, we need to redirect to it
+        return "redirect:/home.html";
     }
 }
-
