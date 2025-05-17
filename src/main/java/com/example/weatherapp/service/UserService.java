@@ -17,6 +17,8 @@ public class UserService {
     private final WeatherPreferencesRepository preferenceRepository;
     private final PasswordEncoder passwordEncoder;
 
+
+
     // Constructor injection instead of @Autowired
     public UserService(UserRepository userRepository,
                        WeatherPreferencesRepository preferenceRepository,
@@ -163,5 +165,14 @@ public class UserService {
             user.setLastLogin(LocalDateTime.now());
             userRepository.save(user);
         }
+    }
+    public User authenticate(String username, String rawPassword) {
+        Optional<User> user = userRepository.findByUsername(username);
+
+        if (user.isPresent() && passwordEncoder.matches(rawPassword, user.get().getPassword())) {
+            return user.orElse(null);
+        }
+
+        return null;
     }
 }
