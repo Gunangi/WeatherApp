@@ -1,47 +1,44 @@
-// src/main/java/com/weatherapp/service/WeatherService.java
+// src/main/java/com/weatherapp/service/UserService.java
 
 package com.example.weatherapp.service;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.example.weatherapp.model.User;
+import com.example.weatherapp.model.WeatherPreferences;
+import com.example.weatherapp.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
+import java.util.Optional;
 
 @Service
-public class WeatherService {
+public class UserService {
 
-    // Inject the API key from application.properties
-    @Value("38b64d931ea106a38a71f9ec1643ba9d")
-    private String apiKey;
+    @Autowired
+    private UserRepository userRepository;
 
-    private final RestTemplate restTemplate;
-    private static final String OPENWEATHER_API_URL = "http://api.openweathermap.org/data/2.5/";
-
-    public WeatherService() {
-        this.restTemplate = new RestTemplate();
+    public User createUser(User user) {
+        // In a real application, you would add logic here for password hashing
+        // and validation (e.g., check if username or email already exists).
+        return userRepository.save(user);
     }
 
-    /**
-     * Fetches the current weather for a given city.
-     *
-     * @param city The name of the city.
-     * @return A string containing the JSON response from the API.
-     */
-    public String getCurrentWeather(String city) {
-        String url = String.format("%sweather?q=%s&appid=%s&units=metric", OPENWEATHER_API_URL, city, apiKey);
-        // In a real app, you'd map this response to a DTO instead of returning a raw string.
-        return restTemplate.getForObject(url, String.class);
+    public Optional<User> getUserById(String userId) {
+        return userRepository.findById(userId);
+    }
+
+    public Optional<WeatherPreferences> getUserPreferences(String userId) {
+        return userRepository.findById(userId).map(User::getPreferences);
     }
 
 
-    public String getForecast(String city) {
-        String url = String.format("%sforecast?q=%s&appid=%s&units=metric", OPENWEATHER_API_URL, city, apiKey);
-        return restTemplate.getForObject(url, String.class);
-    }
-
-
-    public String getAirPollution(double lat, double lon) {
-        String url = String.format("%sair/pollution?lat=%f&lon=%f&appid=%s", OPENWEATHER_API_URL, lat, lon, apiKey);
-        return restTemplate.getForObject(url, String.class);
+    public Optional<User> updateUserPreferences(String userId, WeatherPreferences preferences) {
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            user.setPreferences(preferences);
+            userRepository.save(user);
+            return Optional.of(user);
+        }
+        return Optional.empty();
     }
 }

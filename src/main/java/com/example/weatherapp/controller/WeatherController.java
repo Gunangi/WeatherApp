@@ -1,6 +1,5 @@
 package com.example.weatherapp.controller;
 
-import com.example.weatherapp.service.WeatherService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
