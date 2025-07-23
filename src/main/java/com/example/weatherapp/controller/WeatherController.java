@@ -1,8 +1,5 @@
 package com.example.weatherapp.controller;
 
-import com.example.weatherapp.model.WeatherAlert;
-import com.example.weatherapp.model.WeatherData;
-import com.example.weatherapp.model.WeatherReport;
 import com.example.weatherapp.repository.WeatherReportRepository;
 import com.example.weatherapp.service.WeatherApiService;
 import com.example.weatherapp.service.WeatherService;

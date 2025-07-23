@@ -1,6 +1,5 @@
 package com.example.weatherapp.repository;
 
-import com.example.weatherapp.model.WeatherReport;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;

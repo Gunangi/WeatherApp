@@ -1,8 +1,6 @@
 package com.example.weatherapp.service;
 
 import com.example.weatherapp.config.AppConfiguration;
-import com.example.weatherapp.model.WeatherAlert;
-import com.example.weatherapp.model.WeatherData;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

@@ -1,7 +1,5 @@
 package com.example.weatherapp.service;
 
-import com.example.weatherapp.model.WeatherAlert;
-import com.example.weatherapp.model.WeatherReport;
 import com.example.weatherapp.repository.WeatherAlertRepository;
 import com.example.weatherapp.repository.WeatherReportRepository;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
