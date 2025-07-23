@@ -1,5 +1,3 @@
-// src/main/java/com/weatherapp/service/WeatherService.java
-
 package com.example.weatherapp.service;
 
 import org.springframework.beans.factory.annotation.Value;
