@@ -3,7 +3,6 @@ package com.example.weatherapp.service;
 import com.example.weatherapp.model.User;
 import com.example.weatherapp.model.WeatherPreferences;
 import com.example.weatherapp.repository.UserRepository;
-import com.example.weatherapp.repository.WeatherPreferencesRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 

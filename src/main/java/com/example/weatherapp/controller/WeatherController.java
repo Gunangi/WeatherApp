@@ -1,6 +1,5 @@
 package com.example.weatherapp.controller;
 
-import com.example.weatherapp.repository.WeatherReportRepository;
 import com.example.weatherapp.service.WeatherApiService;
 import com.example.weatherapp.service.WeatherService;
 import org.springframework.http.HttpStatus;
