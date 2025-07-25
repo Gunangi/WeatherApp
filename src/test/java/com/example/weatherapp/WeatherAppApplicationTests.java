@@ -1,23 +1,25 @@
 // src/test/java/com/weatherapp/WeatherApplicationTests.java
 
-package com.example.weatherapp;
+package com.weatherapp;
 
-import com.example.weatherapp.controller.WeatherController;
-import com.example.weatherapp.service.WeatherService;
+import com.weatherapp.controller.WeatherController;
+import com.weatherapp.service.WeatherService;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * This class contains tests for the Spring Boot application.
+ * This class contains a basic test to ensure the Spring application context loads.
  */
 @SpringBootTest
 class ApplicationContextTest {
@@ -32,18 +34,29 @@ class ApplicationContextTest {
 
 /**
  * This class contains tests specifically for the WeatherController.
- * Using @WebMvcTest loads only the web layer (controllers) and not the full application context,
- * making the tests faster and more focused.
+ * We use a modern approach here to avoid the deprecated @MockBean annotation.
  */
 @WebMvcTest(WeatherController.class)
 class WeatherControllerTests {
 
+    /**
+     * A static inner configuration class to provide mock beans for the test context.
+     * This is the recommended replacement for the deprecated @MockBean.
+     */
+    @TestConfiguration
+    static class ControllerTestConfig {
+        @Bean
+        public WeatherService weatherService() {
+            // Create and return a mock of the WeatherService
+            return Mockito.mock(WeatherService.class);
+        }
+    }
+
     @Autowired
     private MockMvc mockMvc;
 
-    // We use @MockBean to create and inject a mock for the WeatherService.
-    // This prevents the actual service from being called, so we don't make real API calls during tests.
-    @MockBean
+    // The mock WeatherService bean is now injected from our TestConfiguration
+    @Autowired
     private WeatherService weatherService;
 
     /**
@@ -56,9 +69,8 @@ class WeatherControllerTests {
         String city = "London";
         String mockJsonResponse = "{\"coord\":{\"lon\":-0.1257,\"lat\":51.5085},\"weather\":[{\"id\":800,\"main\":\"Clear\",\"description\":\"clear sky\",\"icon\":\"01d\"}],\"main\":{\"temp\":15.0}}";
 
-        // Define the behavior of the mocked WeatherService.
-        // When getCurrentWeather("London") is called, it should return our mock JSON.
-        given(weatherService.getCurrentWeather(city)).willReturn(mockJsonResponse);
+        // Define the behavior of the mocked WeatherService using Mockito's 'when'.
+        when(weatherService.getCurrentWeather(city)).thenReturn(mockJsonResponse);
 
         // Perform a GET request to the endpoint and assert the results.
         mockMvc.perform(get("/api/weather/current").param("city", city))
@@ -75,11 +87,12 @@ class WeatherControllerTests {
     void testGetCurrentWeather_CityNotFound() throws Exception {
         String city = "InvalidCity";
 
-        // When the service is called with an invalid city, we can simulate it returning null or an error message.
-        given(weatherService.getCurrentWeather(city)).willReturn("{\"cod\":\"404\",\"message\":\"city not found\"}");
+        // When the service is called with an invalid city, we simulate it returning an error message.
+        when(weatherService.getCurrentWeather(city)).thenReturn("{\"cod\":\"404\",\"message\":\"city not found\"}");
 
         mockMvc.perform(get("/api/weather/current").param("city", city))
                 .andExpect(status().isOk()) // The controller itself returns OK, but the body contains the error
                 .andExpect(content().json("{\"cod\":\"404\",\"message\":\"city not found\"}"));
     }
+}
 }
