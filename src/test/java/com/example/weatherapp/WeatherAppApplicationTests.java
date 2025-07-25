@@ -1,9 +1,9 @@
 // src/test/java/com/weatherapp/WeatherApplicationTests.java
 
-package com.weatherapp;
+package com.example.weatherapp;
 
-import com.weatherapp.controller.WeatherController;
-import com.weatherapp.service.WeatherService;
+import com.example.weatherapp.controller.WeatherController;
+import com.example.weatherapp.service.WeatherService;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,5 +94,4 @@ class WeatherControllerTests {
                 .andExpect(status().isOk()) // The controller itself returns OK, but the body contains the error
                 .andExpect(content().json("{\"cod\":\"404\",\"message\":\"city not found\"}"));
     }
-}
 }
