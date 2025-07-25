@@ -1,0 +1,8 @@
+{
+  "short_name": "WeatherNow",
+  "name": "WeatherNow - React Weather App",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff"
+}
