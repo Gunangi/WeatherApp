@@ -1,0 +1,12 @@
+/* src/App.css */
+
+/* Import Tailwind CSS base styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add any global custom styles here */
+body {
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
