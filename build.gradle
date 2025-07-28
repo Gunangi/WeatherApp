@@ -21,7 +21,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
     // Spring Data MongoDB for database interaction
-    // implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'  // COMMENT THIS OUT
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
     // Spring Boot DevTools for automatic restarts and live reload
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -32,6 +32,9 @@ dependencies {
 
     // Testing dependencies (minimal set)
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // Embedded MongoDB for testing
+    testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo'
 }
 
 tasks.named('test') {
