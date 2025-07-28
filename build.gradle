@@ -1,8 +1,6 @@
-// build.gradle
-
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.2.5' // Use a recent stable version
+    id 'org.springframework.boot' version '3.2.5'
     id 'io.spring.dependency-management' version '1.1.4'
 }
 
@@ -10,7 +8,7 @@ group = 'com.weatherapp'
 version = '0.0.1-SNAPSHOT'
 
 java {
-    sourceCompatibility = '17' // Using Java 17
+    sourceCompatibility = '17'
 }
 
 repositories {
@@ -27,14 +25,21 @@ dependencies {
     // Spring Boot DevTools for automatic restarts and live reload
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
-    // Lombok to reduce boilerplate code (getters, setters, constructors)
+    // Lombok to reduce boilerplate code
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
     // Testing dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+
+    // Add JVM arguments for tests
+    jvmArgs = [
+            '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+    ]
 }
