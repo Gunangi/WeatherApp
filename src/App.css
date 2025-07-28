@@ -1,100 +1,315 @@
-
-
-/* Import Tailwind CSS base styles. This must be at the top. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap'); /* Import Tailwind CSS base styles */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Define global styles and custom properties.
-  We're using the @layer directive to tell Tailwind which "bucket" our styles belong to.
-*/
+/* Import Google Fonts */
+
 @layer base {
-    body {
-        @apply bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200;
-        font-family: 'Inter', sans-serif;
-        transition: background-color 0.5s ease;
+    * {
+        box-sizing: border-box;
     }
 
-    /* --- Animated Gradient Background --- */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900;
+        @apply text-gray-800 dark:text-gray-100;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transition: all 0.3s ease;
+        min-height: 100vh;
+        position: relative;
+    }
+
+    /* Animated background gradient */
     body::before {
         content: '';
         position: fixed;
         top: 0;
         left: 0;
-        height: 100%;
-        width: 100%;
-        z-index: -1;
-        opacity: 0.8;
-        background: radial-gradient(circle at 10% 20%, rgb(200, 220, 255), transparent 50%),
-        radial-gradient(circle at 80% 90%, rgb(255, 220, 220), transparent 50%);
-        animation: gradient-move 20s ease infinite;
+        right: 0;
+        bottom: 0;
+        z-index: -2;
+        background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease infinite;
+        opacity: 0.03;
     }
 
     .dark body::before {
-        opacity: 0.4;
-        background: radial-gradient(circle at 10% 20%, rgb(17, 24, 39), transparent 60%),
-        radial-gradient(circle at 90% 80%, rgb(55, 65, 81), transparent 70%),
-        radial-gradient(circle at 50% 50%, rgb(31, 41, 55), transparent 80%);
+        background: linear-gradient(-45deg, #1a1a2e, #16213e, #0f3460, #533483);
+        opacity: 0.1;
     }
 
-    /* --- Custom Scrollbar (for Webkit browsers like Chrome, Safari) --- */
+    /* Custom scrollbar */
     ::-webkit-scrollbar {
         width: 8px;
+        height: 8px;
     }
+
     ::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-        @apply bg-gray-300 dark:bg-gray-700;
+        @apply bg-gray-100 dark:bg-gray-800;
         border-radius: 10px;
     }
+
+    ::-webkit-scrollbar-thumb {
+        @apply bg-gray-300 dark:bg-gray-600;
+        border-radius: 10px;
+        transition: background-color 0.2s ease;
+    }
+
     ::-webkit-scrollbar-thumb:hover {
-        @apply bg-gray-400 dark:bg-gray-600;
+        @apply bg-gray-400 dark:bg-gray-500;
+    }
+
+    /* Focus styles */
+    input:focus, select:focus, button:focus {
+        outline: none;
+        @apply ring-2 ring-blue-500 ring-opacity-50;
     }
 }
 
-/* Define custom utility/component classes.
-*/
 @layer components {
-    /* --- Glassmorphism Card Style --- */
-    /* Add this class to your card components for a frosted glass effect */
-    .card-glass {
-        @apply rounded-xl shadow-lg;
-        background: rgba(255, 255, 255, 0.3);
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    /* Glass morphism card effect */
+    .glass-card {
+        @apply backdrop-blur-md bg-white/70 dark:bg-gray-800/70;
+        @apply border border-white/20 dark:border-gray-700/50;
+        @apply shadow-xl shadow-black/5 dark:shadow-black/20;
+        @apply rounded-2xl;
+        transition: all 0.3s ease;
     }
 
-    .dark .card-glass {
-        background: rgba(31, 41, 55, 0.4); /* dark-gray-800 with alpha */
-        -webkit-backdrop-filter: blur(12px);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
+    .glass-card:hover {
+        @apply shadow-2xl shadow-black/10 dark:shadow-black/30;
+        @apply bg-white/80 dark:bg-gray-800/80;
+        transform: translateY(-2px);
     }
 
-    /* --- Animation Utility --- */
-    /* Add this class to elements you want to fade in on load */
-    .fade-in-up {
-        animation: fade-in-up 0.6s ease-out forwards;
+    /* Enhanced weather card */
+    .weather-card {
+        @apply glass-card p-8;
+        background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.6) 100%);
+    }
+
+    .dark .weather-card {
+        background: linear-gradient(135deg, rgba(31,41,55,0.8) 0%, rgba(31,41,55,0.6) 100%);
+    }
+
+    /* Forecast card styling */
+    .forecast-card {
+        @apply glass-card p-6;
+        @apply hover:bg-blue-50/50 dark:hover:bg-gray-700/50;
+        @apply cursor-pointer transition-all duration-300;
+    }
+
+    /* Search bar enhancement */
+    .search-container {
+        @apply relative max-w-lg mx-auto mb-8;
+    }
+
+    .search-input {
+        @apply w-full px-6 py-4 text-lg;
+        @apply bg-white/90 dark:bg-gray-800/90;
+        @apply border-2 border-transparent;
+        @apply rounded-full shadow-lg;
+        @apply focus:border-blue-500 focus:bg-white dark:focus:bg-gray-800;
+        @apply placeholder-gray-400 dark:placeholder-gray-500;
+        transition: all 0.3s ease;
+    }
+
+    .search-button {
+        @apply absolute right-2 top-1/2 transform -translate-y-1/2;
+        @apply p-3 bg-blue-500 hover:bg-blue-600 text-white;
+        @apply rounded-full shadow-lg;
+        @apply transition-all duration-300;
+    }
+
+    .search-button:hover {
+        @apply scale-105 shadow-xl;
+    }
+
+    /* Loading animation */
+    .loading-spinner {
+        @apply inline-block w-8 h-8 border-4 border-gray-200 rounded-full;
+        @apply border-t-blue-500 animate-spin;
+    }
+
+    /* Temperature display */
+    .temperature-display {
+        @apply text-6xl md:text-7xl lg:text-8xl font-bold;
+        @apply bg-gradient-to-r from-blue-600 to-purple-600;
+        @apply bg-clip-text text-transparent;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    /* Weather icons container */
+    .weather-icon-container {
+        @apply relative p-4 rounded-full;
+        @apply bg-gradient-to-br from-yellow-100 to-orange-100;
+        @apply dark:from-yellow-900/30 dark:to-orange-900/30;
+    }
+
+    /* Stats grid */
+    .stats-grid {
+        @apply grid grid-cols-3 gap-6 mt-8 pt-6;
+        @apply border-t border-gray-200/50 dark:border-gray-700/50;
+    }
+
+    .stat-item {
+        @apply text-center p-4 rounded-xl;
+        @apply bg-gray-50/50 dark:bg-gray-700/30;
+        @apply hover:bg-gray-100/50 dark:hover:bg-gray-600/30;
+        @apply transition-all duration-300;
+    }
+
+    /* Button styles */
+    .btn-primary {
+        @apply px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white;
+        @apply rounded-lg font-medium shadow-lg;
+        @apply transition-all duration-300;
+        @apply hover:shadow-xl hover:scale-105;
+    }
+
+    .btn-secondary {
+        @apply px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600;
+        @apply text-gray-800 dark:text-gray-200;
+        @apply rounded-lg font-medium shadow;
+        @apply transition-all duration-300;
+    }
+
+    /* Air quality indicator */
+    .aqi-indicator {
+        @apply flex items-center justify-center;
+        @apply w-16 h-16 rounded-full font-bold text-white text-xl;
+        @apply shadow-lg;
+    }
+
+    /* Fade in animation */
+    .fade-in {
+        animation: fadeIn 0.6s ease-out forwards;
         opacity: 0;
     }
+
+    .fade-in-delay-1 { animation-delay: 0.1s; }
+    .fade-in-delay-2 { animation-delay: 0.2s; }
+    .fade-in-delay-3 { animation-delay: 0.3s; }
+    .fade-in-delay-4 { animation-delay: 0.4s; }
 }
 
-/* --- Keyframe Animations --- */
-@keyframes gradient-move {
+@layer utilities {
+    /* Text gradients */
+    .text-gradient-blue {
+        @apply bg-gradient-to-r from-blue-600 to-cyan-500;
+        @apply bg-clip-text text-transparent;
+    }
+
+    .text-gradient-purple {
+        @apply bg-gradient-to-r from-purple-600 to-pink-500;
+        @apply bg-clip-text text-transparent;
+    }
+
+    /* Backdrop blur utilities */
+    .backdrop-blur-xs { backdrop-filter: blur(2px); }
+    .backdrop-blur-sm { backdrop-filter: blur(4px); }
+    .backdrop-blur-md { backdrop-filter: blur(12px); }
+    .backdrop-blur-lg { backdrop-filter: blur(16px); }
+    .backdrop-blur-xl { backdrop-filter: blur(24px); }
+}
+
+/* Keyframe animations */
+@keyframes gradientShift {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
 
-@keyframes fade-in-up {
+@keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
     }
     to {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Responsive design improvements */
+@media (max-width: 768px) {
+    .temperature-display {
+        @apply text-5xl;
+    }
+
+    .stats-grid {
+        @apply grid-cols-3 gap-3;
+    }
+
+    .glass-card {
+        @apply mx-2;
+    }
+}
+
+@media (max-width: 640px) {
+    .weather-card {
+        @apply p-6;
+    }
+
+    .forecast-card {
+        @apply p-4;
+    }
+}
+
+/* Dark mode specific enhancements */
+.dark .glass-card {
+    box-shadow:
+            0 8px 32px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.dark .search-input {
+    box-shadow:
+            0 4px 20px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Loading states */
+.loading-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.dark .loading-shimmer {
+    background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+    background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
 }
