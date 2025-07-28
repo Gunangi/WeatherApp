@@ -1,5 +1,6 @@
 package com.example.weatherapp.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -8,15 +9,14 @@ import org.springframework.web.client.RestTemplate;
 public class WeatherService {
 
     // Fix: Use proper @Value annotation with property name
-    @Value("38b64d931ea106a38a71f9ec1643ba9d")
+    @Value("${openweathermap.api.key}")
     private String apiKey;
 
-    private final RestTemplate restTemplate;
-    private static final String OPENWEATHER_API_URL = "http://api.openweathermap.org/data/2.5/";
+    // Inject RestTemplate as a dependency
+    @Autowired
+    private RestTemplate restTemplate;
 
-    public WeatherService() {
-        this.restTemplate = new RestTemplate();
-    }
+    private static final String OPENWEATHER_API_URL = "http://api.openweathermap.org/data/2.5/";
 
     public String getCurrentWeather(String city) {
         String url = String.format("%sweather?q=%s&appid=%s&units=metric", OPENWEATHER_API_URL, city, apiKey);
