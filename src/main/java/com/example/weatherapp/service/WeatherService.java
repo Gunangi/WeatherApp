@@ -9,7 +9,7 @@ import org.springframework.web.client.RestTemplate;
 public class WeatherService {
 
     // Fix: Use proper @Value annotation with property name
-    @Value("${openweathermap.api.key}")
+    @Value("38b64d931ea106a38a71f9ec1643ba9d")
     private String apiKey;
 
     // Inject RestTemplate as a dependency
