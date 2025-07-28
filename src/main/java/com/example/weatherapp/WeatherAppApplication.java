@@ -1,11 +1,12 @@
+// src/main/java/com/example/weatherapp/WeatherAppApplication.java
 package com.example.weatherapp;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+// import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;  // COMMENT OUT
 
 @SpringBootApplication
-@EnableMongoRepositories(basePackages = "com.example.weatherapp.repository")
+// @EnableMongoRepositories(basePackages = "com.example.weatherapp.repository")  // COMMENT OUT
 public class WeatherAppApplication {
 
     public static void main(String[] args) {

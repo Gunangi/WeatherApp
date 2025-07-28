@@ -1,44 +1,25 @@
+// src/main/java/com/example/weatherapp/service/UserService.java
 package com.example.weatherapp.service;
 
-import com.example.weatherapp.model.User;
 import com.example.weatherapp.model.WeatherPreferences;
-import com.example.weatherapp.repository.UserRepository;
 import org.springframework.stereotype.Service;
-
 import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class UserService {
 
-    private final UserRepository userRepository;
-
-    // Constructor injection instead of @Autowired
-    public UserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
-
-    public User createUser(User user) {
-        // In a real application, you would add logic here for password hashing
-        // and validation (e.g., check if username or email already exists).
-        return userRepository.save(user);
-    }
-
-    public Optional<User> getUserById(String userId) {
-        return userRepository.findById(userId);
-    }
+    // In-memory storage for demo purposes
+    private Map<String, WeatherPreferences> userPreferences = new HashMap<>();
 
     public Optional<WeatherPreferences> getUserPreferences(String userId) {
-        return userRepository.findById(userId).map(User::getPreferences);
+        WeatherPreferences prefs = userPreferences.getOrDefault(userId, new WeatherPreferences());
+        return Optional.of(prefs);
     }
 
-    public Optional<User> updateUserPreferences(String userId, WeatherPreferences preferences) {
-        Optional<User> userOptional = userRepository.findById(userId);
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            user.setPreferences(preferences);
-            userRepository.save(user);
-            return Optional.of(user);
-        }
-        return Optional.empty();
+    public boolean updateUserPreferences(String userId, WeatherPreferences preferences) {
+        userPreferences.put(userId, preferences);
+        return true;
     }
 }

@@ -21,7 +21,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
     // Spring Data MongoDB for database interaction
-    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+    // implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'  // COMMENT THIS OUT
 
     // Spring Boot DevTools for automatic restarts and live reload
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
