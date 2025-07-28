@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.2.5'
     id 'io.spring.dependency-management' version '1.1.4'
+    id 'com.github.node-gradle.node' version '7.0.1'
 }
 
 group = 'com.weatherapp'
@@ -35,6 +36,58 @@ dependencies {
 
     // Embedded MongoDB for testing
     testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo'
+}
+
+// Node.js plugin configuration
+node {
+    version = '18.17.0'
+    npmVersion = '9.6.7'
+    download = true
+    workDir = file("${project.projectDir}/.gradle/nodejs")
+    npmWorkDir = file("${project.projectDir}/.gradle/npm")
+    nodeProjectDir = file("${project.projectDir}")
+}
+
+// Task to install npm dependencies
+task npmInstall(type: NpmTask) {
+    description = "Install Node.js packages"
+    args = ['install']
+    inputs.file('package.json')
+    inputs.file('package-lock.json')
+    outputs.dir('node_modules')
+}
+
+// Task to build React app
+task buildReact(type: NpmTask, dependsOn: npmInstall) {
+    description = "Build React application"
+    args = ['run', 'build']
+    inputs.dir('src')
+    inputs.dir('public')
+    inputs.file('package.json')
+    outputs.dir('build')
+}
+
+// Task to copy React build to Spring Boot static resources
+task copyReactBuild(type: Copy, dependsOn: buildReact) {
+    description = "Copy React build to Spring Boot static resources"
+    from 'build'
+    into 'src/main/resources/static'
+}
+
+// Task to clean React build files
+task cleanReact(type: Delete) {
+    description = "Clean React build files"
+    delete 'build'
+    delete 'src/main/resources/static'
+}
+
+// Make sure React is built before Spring Boot processes resources
+processResources.dependsOn copyReactBuild
+clean.dependsOn cleanReact
+
+// Task to run both frontend and backend in development
+task dev(dependsOn: ['bootRun']) {
+    description = "Run the application in development mode"
 }
 
 tasks.named('test') {
