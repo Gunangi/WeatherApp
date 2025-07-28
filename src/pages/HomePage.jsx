@@ -9,6 +9,9 @@ import { getCurrentWeather, getForecast, getAirPollution } from '../api/weatherA
 import { AppContext } from '../context/AppContext';
 import { MapPin } from 'lucide-react';
 
+// Add this to the top of HomePage.jsx after imports
+console.log('HomePage component loaded');
+
 const HomePage = () => {
     const [city, setCity] = useState('Nagpur'); // Default city
     const [weatherData, setWeatherData] = useState(null);
@@ -59,6 +62,9 @@ const HomePage = () => {
             }
         );
     }, []); // Empty dependency array means this runs once on mount
+
+    // Add this in the HomePage component before the return statement
+    console.log('HomePage render - loading:', loading, 'error:', error, 'weatherData:', !!weatherData);
 
     return (
         <div className="container mx-auto p-4">
