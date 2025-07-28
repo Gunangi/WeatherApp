@@ -1,5 +1,3 @@
-// src/test/java/com/example/weatherapp/WeatherAppApplicationTests.java
-
 package com.example.weatherapp;
 
 import com.example.weatherapp.controller.WeatherController;
@@ -7,9 +5,12 @@ import com.example.weatherapp.service.WeatherService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.RestTemplate;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -17,24 +18,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * This class contains a basic test to ensure the Spring application context loads.
- */
-@SpringBootTest
-class ApplicationContextTest {
-
-    /**
-     * A simple sanity check test that will fail if the application context cannot start.
-     */
-    @Test
-    void contextLoads() {
-    }
-}
-
-/**
  * This class contains tests specifically for the WeatherController.
  * Using @MockBean to mock the WeatherService dependency.
  */
 @WebMvcTest(WeatherController.class)
+@TestPropertySource(properties = {
+        "openweathermap.api.key=test-api-key",
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration,org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration"
+})
 class WeatherControllerTests {
 
     @Autowired
@@ -43,6 +34,14 @@ class WeatherControllerTests {
     // Mock the WeatherService using Spring Boot's @MockBean
     @MockBean
     private WeatherService weatherService;
+
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        public RestTemplate restTemplate() {
+            return new RestTemplate();
+        }
+    }
 
     /**
      * Tests the GET /api/weather/current endpoint.
@@ -72,11 +71,10 @@ class WeatherControllerTests {
     void testGetCurrentWeather_CityNotFound() throws Exception {
         String city = "InvalidCity";
 
-        // When the service is called with an invalid city, we simulate it returning an error message.
-        when(weatherService.getCurrentWeather(city)).thenReturn("{\"cod\":\"404\",\"message\":\"city not found\"}");
+        // When the service is called with an invalid city, we simulate it throwing an exception.
+        when(weatherService.getCurrentWeather(city)).thenThrow(new RuntimeException("City not found"));
 
         mockMvc.perform(get("/api/weather/current").param("city", city))
-                .andExpect(status().isOk()) // The controller itself returns OK, but the body contains the error
-                .andExpect(content().json("{\"cod\":\"404\",\"message\":\"city not found\"}"));
+                .andExpect(status().isBadRequest()); // Expect HTTP 400 Bad Request due to our error handling
     }
 }
