@@ -5,14 +5,10 @@ package com.example.weatherapp;
 import com.example.weatherapp.controller.WeatherController;
 import com.example.weatherapp.service.WeatherService;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.when;
@@ -24,7 +20,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * This class contains a basic test to ensure the Spring application context loads.
  */
 @SpringBootTest
-@ActiveProfiles("test")
 class ApplicationContextTest {
 
     /**
@@ -37,31 +32,16 @@ class ApplicationContextTest {
 
 /**
  * This class contains tests specifically for the WeatherController.
- * We use a modern approach here to avoid the deprecated @MockBean annotation.
+ * Using @MockBean to mock the WeatherService dependency.
  */
 @WebMvcTest(WeatherController.class)
-@ActiveProfiles("test")
 class WeatherControllerTests {
-
-    /**
-     * A static inner configuration class to provide mock beans for the test context.
-     * This is the recommended replacement for the deprecated @MockBean.
-     */
-    @TestConfiguration
-    static class ControllerTestConfig {
-        @Bean
-        @Primary
-        public WeatherService weatherService() {
-            // Create and return a mock of the WeatherService
-            return Mockito.mock(WeatherService.class);
-        }
-    }
 
     @Autowired
     private MockMvc mockMvc;
 
-    // The mock WeatherService bean is now injected from our TestConfiguration
-    @Autowired
+    // Mock the WeatherService using Spring Boot's @MockBean
+    @MockBean
     private WeatherService weatherService;
 
     /**
