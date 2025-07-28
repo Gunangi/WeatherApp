@@ -1,4 +1,4 @@
-// src/test/java/com/weatherapp/WeatherApplicationTests.java
+// src/test/java/com/example/weatherapp/WeatherAppApplicationTests.java
 
 package com.example.weatherapp;
 
@@ -11,6 +11,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.when;
@@ -22,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * This class contains a basic test to ensure the Spring application context loads.
  */
 @SpringBootTest
+@ActiveProfiles("test")
 class ApplicationContextTest {
 
     /**
@@ -37,6 +40,7 @@ class ApplicationContextTest {
  * We use a modern approach here to avoid the deprecated @MockBean annotation.
  */
 @WebMvcTest(WeatherController.class)
+@ActiveProfiles("test")
 class WeatherControllerTests {
 
     /**
@@ -46,6 +50,7 @@ class WeatherControllerTests {
     @TestConfiguration
     static class ControllerTestConfig {
         @Bean
+        @Primary
         public WeatherService weatherService() {
             // Create and return a mock of the WeatherService
             return Mockito.mock(WeatherService.class);
