@@ -48,16 +48,7 @@ node {
     nodeProjectDir = file("${project.projectDir}")
 }
 
-// Task to install npm dependencies
-task npmInstall(type: NpmTask) {
-    description = "Install Node.js packages"
-    args = ['install']
-    inputs.file('package.json')
-    inputs.file('package-lock.json')
-    outputs.dir('node_modules')
-}
-
-// Task to build React app
+// Task to build React app (using the plugin's npmInstall task as dependency)
 task buildReact(type: NpmTask, dependsOn: npmInstall) {
     description = "Build React application"
     args = ['run', 'build']
