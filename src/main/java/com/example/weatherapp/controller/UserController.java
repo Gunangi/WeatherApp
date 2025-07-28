@@ -1,24 +1,31 @@
-// src/main/java/com/weatherapp/controller/UserController.java
-
 package com.example.weatherapp.controller;
 
 import com.example.weatherapp.model.User;
 import com.example.weatherapp.model.WeatherPreferences;
 import com.example.weatherapp.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/users") // Base path for all endpoints in this controller
+@RequestMapping("/api/users")
+@CrossOrigin(origins = "http://localhost:3000") // Allow React frontend
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+
+    // Constructor injection instead of @Autowired
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userService.createUser(user);
+    public ResponseEntity<User> createUser(@RequestBody User user) {
+        try {
+            User createdUser = userService.createUser(user);
+            return ResponseEntity.ok(createdUser);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @GetMapping("/{userId}")
