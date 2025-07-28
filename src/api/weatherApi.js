@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-// The 'proxy' in package.json will prepend 'http://localhost:8080' to these requests
+// Use relative URLs since we're serving from the same domain
 const API_BASE_URL = '/api';
 
 /**
