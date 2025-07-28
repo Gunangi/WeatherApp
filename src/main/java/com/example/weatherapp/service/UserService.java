@@ -1,11 +1,8 @@
-// src/main/java/com/weatherapp/service/UserService.java
-
 package com.example.weatherapp.service;
 
 import com.example.weatherapp.model.User;
 import com.example.weatherapp.model.WeatherPreferences;
 import com.example.weatherapp.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -13,8 +10,12 @@ import java.util.Optional;
 @Service
 public class UserService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+
+    // Constructor injection instead of @Autowired
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     public User createUser(User user) {
         // In a real application, you would add logic here for password hashing
@@ -29,7 +30,6 @@ public class UserService {
     public Optional<WeatherPreferences> getUserPreferences(String userId) {
         return userRepository.findById(userId).map(User::getPreferences);
     }
-
 
     public Optional<User> updateUserPreferences(String userId, WeatherPreferences preferences) {
         Optional<User> userOptional = userRepository.findById(userId);
