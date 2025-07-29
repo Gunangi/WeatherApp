@@ -1,6 +1,6 @@
 // src/components/SearchBar.jsx
 import React, { useState } from 'react';
-import { Search, MapPin } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 const SearchBar = ({ onSearch }) => {
     const [query, setQuery] = useState('');

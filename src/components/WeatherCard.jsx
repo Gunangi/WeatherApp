@@ -1,7 +1,7 @@
 // src/components/WeatherCard.jsx
 
 import React from 'react';
-import { Thermometer, Wind, Droplet, Eye, Gauge, Sunrise, Sunset, MapPin } from 'lucide-react';
+import { Wind, Droplet, Eye, Gauge, Sunrise, Sunset, MapPin } from 'lucide-react';
 
 const WeatherCard = ({ weatherData, unit }) => {
     if (!weatherData) return null;

@@ -13,7 +13,7 @@ java {
     targetCompatibility = '17'
 }
 
-// Configure the main class for Spring Boot
+// Configure the main class for Spring Boot - Updated to match actual location
 springBoot {
     mainClass = 'com.example.weatherapp.WeatherAppApplication'
 }
