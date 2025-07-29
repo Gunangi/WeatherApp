@@ -13,6 +13,11 @@ java {
     targetCompatibility = '17'
 }
 
+// Configure the main class for Spring Boot
+springBoot {
+    mainClass = 'com.example.weatherapp.WeatherAppApplication'
+}
+
 repositories {
     mavenCentral()
 }
