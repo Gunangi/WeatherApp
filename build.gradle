@@ -36,11 +36,12 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
-    // Testing dependencies (minimal set)
+    // Testing dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
-    // Embedded MongoDB for testing
-    testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo'
+    // Alternative: Use Testcontainers for MongoDB testing (more reliable)
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:mongodb'
 }
 
 // Node.js plugin configuration
