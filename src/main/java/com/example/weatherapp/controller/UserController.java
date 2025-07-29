@@ -1,7 +1,7 @@
 // src/main/java/com/example/weatherapp/controller/UserController.java
 package com.example.weatherapp.controller;
 
-import com.example.weatherapp.model.WeatherPreferences;
+import com.example.weatherapp.model.EnhancedWeatherPreferences;
 import com.example.weatherapp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,19 +18,19 @@ public class UserController {
     private UserService userService;
 
     @GetMapping("/{userId}/preferences")
-    public ResponseEntity<WeatherPreferences> getUserPreferences(@PathVariable String userId) {
-        Optional<WeatherPreferences> preferences = userService.getUserPreferences(userId);
+    public ResponseEntity<EnhancedWeatherPreferences> getUserPreferences(@PathVariable String userId) {
+        Optional<EnhancedWeatherPreferences> preferences = userService.getUserPreferences(userId);
         if (preferences.isPresent()) {
             return ResponseEntity.ok(preferences.get());
         } else {
             // Return default preferences if user not found
-            WeatherPreferences defaultPrefs = new WeatherPreferences();
+            EnhancedWeatherPreferences defaultPrefs = new EnhancedWeatherPreferences();
             return ResponseEntity.ok(defaultPrefs);
         }
     }
 
     @PutMapping("/{userId}/preferences")
-    public ResponseEntity<String> updateUserPreferences(@PathVariable String userId, @RequestBody WeatherPreferences preferences) {
+    public ResponseEntity<String> updateUserPreferences(@PathVariable String userId, @RequestBody EnhancedWeatherPreferences preferences) {
         boolean updated = userService.updateUserPreferences(userId, preferences);
         if (updated) {
             return ResponseEntity.ok("{\"message\":\"Preferences updated successfully\"}");
@@ -40,7 +40,7 @@ public class UserController {
     }
 
     @PostMapping("/{userId}")
-    public ResponseEntity<String> createUser(@PathVariable String userId, @RequestBody WeatherPreferences preferences) {
+    public ResponseEntity<String> createUser(@PathVariable String userId, @RequestBody EnhancedWeatherPreferences preferences) {
         boolean created = userService.createUser(userId, preferences);
         if (created) {
             return ResponseEntity.ok("{\"message\":\"User created successfully\"}");

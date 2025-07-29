@@ -1,4 +1,3 @@
-// src/main/java/com/example/weatherapp/model/FavoriteLocation.java
 package com.example.weatherapp.model;
 
 import org.springframework.data.annotation.Id;

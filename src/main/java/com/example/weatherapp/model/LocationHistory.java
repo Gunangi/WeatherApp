@@ -26,4 +26,3 @@ public class LocationHistory {
     private int searchCount;
     private boolean isGpsDetected;
 }
-

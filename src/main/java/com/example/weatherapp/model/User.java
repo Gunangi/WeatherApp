@@ -16,5 +16,5 @@ public class User {
     private String email;
     private String password; // In a real app, this should be securely hashed
 
-    private WeatherPreferences preferences = new WeatherPreferences(); // Embeds the preferences
+    private EnhancedWeatherPreferences preferences = new EnhancedWeatherPreferences(); // Embeds the preferences
 }

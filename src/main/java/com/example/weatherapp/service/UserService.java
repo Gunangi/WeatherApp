@@ -2,7 +2,7 @@
 package com.example.weatherapp.service;
 
 import com.example.weatherapp.model.User;
-import com.example.weatherapp.model.WeatherPreferences;
+import com.example.weatherapp.model.EnhancedWeatherPreferences;
 import com.example.weatherapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,7 +15,7 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    public Optional<WeatherPreferences> getUserPreferences(String userId) {
+    public Optional<EnhancedWeatherPreferences> getUserPreferences(String userId) {
         Optional<User> user = userRepository.findById(userId);
         if (user.isPresent()) {
             return Optional.of(user.get().getPreferences());
@@ -23,7 +23,7 @@ public class UserService {
         return Optional.empty();
     }
 
-    public boolean updateUserPreferences(String userId, WeatherPreferences preferences) {
+    public boolean updateUserPreferences(String userId, EnhancedWeatherPreferences preferences) {
         try {
             Optional<User> userOptional = userRepository.findById(userId);
             User user;
@@ -46,7 +46,7 @@ public class UserService {
         }
     }
 
-    public boolean createUser(String userId, WeatherPreferences preferences) {
+    public boolean createUser(String userId, EnhancedWeatherPreferences preferences) {
         try {
             User user = new User();
             user.setId(userId);
