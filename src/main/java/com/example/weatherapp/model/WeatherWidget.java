@@ -8,25 +8,23 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Document(collection = "weather_reminders")
-public class WeatherReminder {
+@Document(collection = "weather_widgets")
+public class WeatherWidget {
     @Id
     private String id;
     private String userId;
+    private String widgetType; // current_weather, forecast, alerts, air_quality, etc.
     private String locationId;
-    private ReminderType reminderType;
-    private String message;
-    private LocalTime scheduledTime;
-    private boolean isActive;
-    private boolean isRecurring;
-    private String recurringDays; // JSON array of day names
+    private Map<String, Object> configuration;
+    private int position; // for ordering on dashboard
+    private boolean isVisible;
     private LocalDateTime createdAt;
-    private LocalDateTime lastSent;
-    private WeatherCondition triggerCondition;
+    private LocalDateTime updatedAt;
+    private String size; // small, medium, large
 }
