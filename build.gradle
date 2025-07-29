@@ -2,20 +2,14 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.2.5'
     id 'io.spring.dependency-management' version '1.1.4'
-    id 'com.github.node-gradle.node' version '7.0.1'
 }
 
-group = 'com.weatherapp'
+group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 
 java {
     sourceCompatibility = '17'
     targetCompatibility = '17'
-}
-
-// Configure the main class for Spring Boot - Updated to match actual location
-springBoot {
-    mainClass = 'com.example.weatherapp.WeatherAppApplication'
 }
 
 repositories {
@@ -38,76 +32,19 @@ dependencies {
 
     // Testing dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-
-    // Alternative: Use Testcontainers for MongoDB testing (more reliable)
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:mongodb'
 }
-
-// Node.js plugin configuration
-node {
-    version = '18.17.0'
-    npmVersion = '9.6.7'
-    download = true
-    workDir = file("${project.projectDir}/.gradle/nodejs")
-    npmWorkDir = file("${project.projectDir}/.gradle/npm")
-    nodeProjectDir = file("${project.projectDir}")
-}
-
-// Task to build React app (using the plugin's npmInstall task as dependency)
-task buildReact(type: NpmTask, dependsOn: npmInstall) {
-    description = "Build React application"
-    args = ['run', 'build']
-    inputs.dir('src')
-    inputs.dir('public')
-    inputs.file('package.json')
-    outputs.dir('build')
-}
-
-// Task to copy React build to Spring Boot static resources
-task copyReactBuild(type: Copy, dependsOn: buildReact) {
-    description = "Copy React build to Spring Boot static resources"
-    from 'build'
-    into 'src/main/resources/static'
-
-    // Ensure the target directory exists
-    doFirst {
-        mkdir 'src/main/resources/static'
-    }
-}
-
-// Task to clean React build files
-task cleanReact(type: Delete) {
-    description = "Clean React build files"
-    delete 'build'
-    delete 'src/main/resources/static'
-}
-
-// Task to prepare frontend resources
-task prepareFrontend {
-    dependsOn copyReactBuild
-    description = "Prepare frontend resources for Spring Boot"
-}
-
-// Configure task dependencies properly
-// Make sure React is built before Spring Boot processes resources
-processResources {
-    dependsOn prepareFrontend
-    mustRunAfter compileJava
-}
-
-// Clean React files when cleaning the project
-clean.dependsOn cleanReact
-
-// Task to run both frontend and backend in development
-task dev(dependsOn: ['bootRun']) {
-    description = "Run the application in development mode"
-}
-
-// Ensure proper task ordering
-copyReactBuild.mustRunAfter compileJava
-prepareFrontend.mustRunAfter compileJava
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// Ensure the main class is correctly specified
+springBoot {
+    mainClass = 'com.example.weatherapp.WeatherAppApplication'
+}
+
+// Simple task to run the application
+task runApp {
+    dependsOn 'bootRun'
+    description = 'Run the Spring Boot application'
 }
