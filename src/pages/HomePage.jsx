@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import SearchBar from '../components/SearchBar';
+import SearchBar from '../components/Enhanced_SearchBar';
 import WeatherCard from '../components/WeatherCard';
 import Forecast from '../components/Forecast';
 import AirPollutionDisplay from '../components/AirPollutionDisplay';
