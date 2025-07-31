@@ -1,8 +1,6 @@
 // src/main/java/com/example/weatherapp/controller/LocationController.java
 package com.example.weatherapp.controller;
 
-import com.example.weatherapp.dto.LocationSearchResult;
-import com.example.weatherapp.model.FavoriteLocation;
 import com.example.weatherapp.model.LocationHistory;
 import com.example.weatherapp.service.LocationService;
 import org.springframework.beans.factory.annotation.Autowired;

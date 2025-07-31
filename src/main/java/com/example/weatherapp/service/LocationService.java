@@ -1,10 +1,8 @@
 package com.example.weatherapp.service;
 
 import com.example.weatherapp.model.LocationHistory;
-import com.example.weatherapp.model.FavoriteLocation;
 import com.example.weatherapp.repository.LocationHistoryRepository;
 import com.example.weatherapp.repository.FavoriteLocationRepository;
-import com.example.weatherapp.dto.LocationSearchResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -13,7 +11,6 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class LocationService {

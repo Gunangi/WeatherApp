@@ -1,7 +1,6 @@
 // src/main/java/com/example/weatherapp/controller/DashboardController.java
 package com.example.weatherapp.controller;
 
-import com.example.weatherapp.dto.DashboardData;
 import com.example.weatherapp.service.DashboardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

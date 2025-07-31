@@ -1,6 +1,5 @@
 package com.example.weatherapp.repository;
 
-import com.example.weatherapp.model.FavoriteLocation;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

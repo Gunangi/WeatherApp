@@ -1,7 +1,6 @@
 // src/main/java/com/example/weatherapp/service/DashboardService.java
 package com.example.weatherapp.service;
 
-import com.example.weatherapp.dto.DashboardData;
 import com.example.weatherapp.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

@@ -1,7 +1,5 @@
 package com.example.weatherapp.repository;
 
-import com.example.weatherapp.model.WeatherReminder;
-import com.example.weatherapp.model.ReminderType;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
