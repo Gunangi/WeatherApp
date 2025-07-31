@@ -1,367 +1,545 @@
-// src/hooks/useWeather.js
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation } from '../context/LocationContext.jsx';
-import { useNotifications } from '../context/NotificationContext.jsx';
-import {
-    getCurrentWeather,
-    setCurrentWeather,
-    getForecast,
-    setForecast,
-    getAirQuality,
-    setAirQuality
-} from '../utils/cacheUtils.js';
-import { API_CONFIG, ERROR_MESSAGES } from '../utils/constants.js';
+import { useWeatherContext } from '../context/WeatherContext';
+import { useUserContext } from '../context/UserContext';
 
-/**
- * Custom hook for managing weather data
- * @param {Object} options - Hook options
- * @returns {Object} Weather data and methods
- */
-export function useWeather(options = {}) {
+// Mock API base URL - replace with your actual API endpoint
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+
+// Custom hook for weather data management
+export const useWeather = () => {
+    const weatherContext = useWeatherContext();
+    const userContext = useUserContext();
+    const [refreshing, setRefreshing] = useState(false);
+    const refreshTimeoutRef = useRef(null);
+    const abortControllerRef = useRef(null);
+
     const {
-        autoRefresh = true,
-        refreshInterval = 10 * 60 * 1000, // 10 minutes
-        includeAirQuality = true,
-        includeForecast = true,
-        enableNotifications = true
-    } = options;
+        currentWeather,
+        forecast,
+        hourlyForecast,
+        airQuality,
+        historicalWeather,
+        weatherAlerts,
+        selectedLocation,
+        loading,
+        error,
+        lastUpdated,
+        setLoading,
+        setError,
+        setCurrentWeather,
+        setForecast,
+        setHourlyForecast,
+        setAirQuality,
+        setHistoricalWeather,
+        setWeatherAlerts,
+        setSelectedLocation,
+        addToLocationHistory,
+        setUvIndex,
+        setActivitySuggestions,
+        setClothingSuggestions
+    } = weatherContext;
 
-    const { selectedLocation } = useLocation();
-    const { checkWeatherConditions } = useNotifications();
+    const { locationPreferences, temperatureUnit } = userContext;
 
-    // State
-    const [weatherData, setWeatherData] = useState({
-        current: null,
-        forecast: null,
-        airQuality: null,
-        alerts: []
-    });
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [lastUpdate, setLastUpdate] = useState(null);
-
-    // Refs
-    const refreshTimer = useRef(null);
-    const abortController = useRef(null);
-
-    /**
-     * Fetch current weather data
-     */
-    const fetchCurrentWeather = useCallback(async (location) => {
-        if (!location) return null;
-
+    // Helper function to make API calls with proper error handling
+    const makeApiCall = useCallback(async (endpoint, options = {}) => {
         try {
-            // Check cache first
-            const cached = getCurrentWeather(location);
-            if (cached) {
-                return cached;
+            // Cancel previous request if exists
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
             }
 
-            // Fetch from API
-            const response = await fetch(
-                `${API_CONFIG.BASE_URL}/weather?lat=${location.lat}&lon=${location.lon}&appid=${process.env.REACT_APP_OPENWEATHER_API_KEY}&units=metric`,
-                {
-                    signal: abortController.current?.signal,
-                    timeout: API_CONFIG.TIMEOUT
-                }
-            );
+            abortControllerRef.current = new AbortController();
+
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers,
+                },
+                signal: abortControllerRef.current.signal,
+                ...options,
+            });
 
             if (!response.ok) {
-                throw new Error(`Weather API error: ${response.status}`);
+                throw new Error(`API Error: ${response.status} ${response.statusText}`);
             }
 
-            const data = await response.json();
-
-            // Cache the result
-            setCurrentWeather(location, data);
-
-            return data;
+            return await response.json();
         } catch (error) {
             if (error.name === 'AbortError') {
+                console.log('Request was aborted');
                 return null;
             }
             throw error;
         }
     }, []);
 
-    /**
-     * Fetch forecast data
-     */
+    // Fetch current weather data
+    const fetchCurrentWeather = useCallback(async (location) => {
+        if (!location || (!location.lat && !location.city)) {
+            throw new Error('Location is required to fetch weather data');
+        }
+
+        try {
+            setLoading(true);
+            setError(null);
+
+            const params = new URLSearchParams();
+            if (location.lat && location.lon) {
+                params.append('lat', location.lat);
+                params.append('lon', location.lon);
+            } else if (location.city) {
+                params.append('city', location.city);
+                if (location.country) {
+                    params.append('country', location.country);
+                }
+            }
+            params.append('units', temperatureUnit);
+
+            const data = await makeApiCall(`/weather/current?${params}`);
+
+            if (data) {
+                setCurrentWeather(data);
+                setSelectedLocation({
+                    city: data.location.city,
+                    country: data.location.country,
+                    lat: data.location.lat,
+                    lon: data.location.lon,
+                    timezone: data.location.timezone
+                });
+
+                // Add to location history
+                addToLocationHistory({
+                    city: data.location.city,
+                    country: data.location.country,
+                    lat: data.location.lat,
+                    lon: data.location.lon,
+                    searchedAt: new Date().toISOString()
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching current weather:', error);
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [setLoading, setError, setCurrentWeather, setSelectedLocation, addToLocationHistory, temperatureUnit, makeApiCall]);
+
+    // Fetch 5-day forecast
     const fetchForecast = useCallback(async (location) => {
-        if (!location || !includeForecast) return null;
+        if (!location || (!location.lat && !location.city)) {
+            throw new Error('Location is required to fetch forecast data');
+        }
 
         try {
-            // Check cache first
-            const cached = getForecast(location);
-            if (cached) {
-                return cached;
-            }
-
-            // Fetch from API
-            const response = await fetch(
-                `${API_CONFIG.BASE_URL}/forecast?lat=${location.lat}&lon=${location.lon}&appid=${process.env.REACT_APP_OPENWEATHER_API_KEY}&units=metric`,
-                {
-                    signal: abortController.current?.signal,
-                    timeout: API_CONFIG.TIMEOUT
+            const params = new URLSearchParams();
+            if (location.lat && location.lon) {
+                params.append('lat', location.lat);
+                params.append('lon', location.lon);
+            } else if (location.city) {
+                params.append('city', location.city);
+                if (location.country) {
+                    params.append('country', location.country);
                 }
-            );
-
-            if (!response.ok) {
-                throw new Error(`Forecast API error: ${response.status}`);
             }
+            params.append('units', temperatureUnit);
 
-            const data = await response.json();
+            const data = await makeApiCall(`/weather/forecast?${params}`);
 
-            // Cache the result
-            setForecast(location, data);
-
-            return data;
+            if (data) {
+                setForecast(data);
+            }
         } catch (error) {
-            if (error.name === 'AbortError') {
-                return null;
-            }
-            throw error;
+            console.error('Error fetching forecast:', error);
+            setError(error.message);
         }
-    }, [includeForecast]);
+    }, [setForecast, setError, temperatureUnit, makeApiCall]);
 
-    /**
-     * Fetch air quality data
-     */
+    // Fetch hourly forecast
+    const fetchHourlyForecast = useCallback(async (location) => {
+        if (!location || (!location.lat && !location.city)) {
+            throw new Error('Location is required to fetch hourly forecast');
+        }
+
+        try {
+            const params = new URLSearchParams();
+            if (location.lat && location.lon) {
+                params.append('lat', location.lat);
+                params.append('lon', location.lon);
+            } else if (location.city) {
+                params.append('city', location.city);
+                if (location.country) {
+                    params.append('country', location.country);
+                }
+            }
+            params.append('units', temperatureUnit);
+
+            const data = await makeApiCall(`/weather/hourly?${params}`);
+
+            if (data) {
+                setHourlyForecast(data);
+            }
+        } catch (error) {
+            console.error('Error fetching hourly forecast:', error);
+            setError(error.message);
+        }
+    }, [setHourlyForecast, setError, temperatureUnit, makeApiCall]);
+
+    // Fetch air quality data
     const fetchAirQuality = useCallback(async (location) => {
-        if (!location || !includeAirQuality) return null;
+        if (!location || (!location.lat && !location.city)) {
+            throw new Error('Location is required to fetch air quality data');
+        }
 
         try {
-            // Check cache first
-            const cached = getAirQuality(location);
-            if (cached) {
-                return cached;
-            }
-
-            // Fetch from API
-            const response = await fetch(
-                `${API_CONFIG.AIR_QUALITY_URL}?lat=${location.lat}&lon=${location.lon}&appid=${process.env.REACT_APP_OPENWEATHER_API_KEY}`,
-                {
-                    signal: abortController.current?.signal,
-                    timeout: API_CONFIG.TIMEOUT
+            const params = new URLSearchParams();
+            if (location.lat && location.lon) {
+                params.append('lat', location.lat);
+                params.append('lon', location.lon);
+            } else if (location.city) {
+                params.append('city', location.city);
+                if (location.country) {
+                    params.append('country', location.country);
                 }
-            );
-
-            if (!response.ok) {
-                throw new Error(`Air Quality API error: ${response.status}`);
             }
 
-            const data = await response.json();
+            const data = await makeApiCall(`/air-quality?${params}`);
 
-            // Cache the result
-            setAirQuality(location, data);
-
-            return data;
+            if (data) {
+                setAirQuality(data);
+            }
         } catch (error) {
-            if (error.name === 'AbortError') {
-                return null;
-            }
-            throw error;
+            console.error('Error fetching air quality:', error);
+            setError(error.message);
         }
-    }, [includeAirQuality]);
+    }, [setAirQuality, setError, makeApiCall]);
 
-    /**
-     * Fetch all weather data
-     */
-    const fetchWeatherData = useCallback(async (location = selectedLocation, force = false) => {
-        if (!location) {
-            setError('No location provided');
+    // Fetch historical weather data
+    const fetchHistoricalWeather = useCallback(async (location, startDate, endDate) => {
+        if (!location || (!location.lat && !location.city)) {
+            throw new Error('Location is required to fetch historical weather');
+        }
+
+        try {
+            const params = new URLSearchParams();
+            if (location.lat && location.lon) {
+                params.append('lat', location.lat);
+                params.append('lon', location.lon);
+            } else if (location.city) {
+                params.append('city', location.city);
+                if (location.country) {
+                    params.append('country', location.country);
+                }
+            }
+            params.append('startDate', startDate);
+            params.append('endDate', endDate);
+            params.append('units', temperatureUnit);
+
+            const data = await makeApiCall(`/weather/historical?${params}`);
+
+            if (data) {
+                setHistoricalWeather(data);
+            }
+        } catch (error) {
+            console.error('Error fetching historical weather:', error);
+            setError(error.message);
+        }
+    }, [setHistoricalWeather, setError, temperatureUnit, makeApiCall]);
+
+    // Fetch weather alerts
+    const fetchWeatherAlerts = useCallback(async (location) => {
+        if (!location || (!location.lat && !location.city)) {
             return;
         }
 
-        // Cancel previous request
-        if (abortController.current) {
-            abortController.current.abort();
-        }
-        abortController.current = new AbortController();
+        try {
+            const params = new URLSearchParams();
+            if (location.lat && location.lon) {
+                params.append('lat', location.lat);
+                params.append('lon', location.lon);
+            } else if (location.city) {
+                params.append('city', location.city);
+                if (location.country) {
+                    params.append('country', location.country);
+                }
+            }
 
-        setIsLoading(true);
-        setError(null);
+            const data = await makeApiCall(`/weather/alerts?${params}`);
+
+            if (data) {
+                setWeatherAlerts(data.alerts || []);
+            }
+        } catch (error) {
+            console.error('Error fetching weather alerts:', error);
+            // Don't set error for alerts as they're not critical
+        }
+    }, [setWeatherAlerts, makeApiCall]);
+
+    // Fetch UV index
+    const fetchUvIndex = useCallback(async (location) => {
+        if (!location || (!location.lat && !location.city)) {
+            return;
+        }
 
         try {
-            // Fetch all data in parallel
-            const [current, forecast, airQuality] = await Promise.allSettled([
-                fetchCurrentWeather(location),
-                fetchForecast(location),
-                fetchAirQuality(location)
-            ]);
-
-            const newWeatherData = {
-                current: current.status === 'fulfilled' ? current.value : null,
-                forecast: forecast.status === 'fulfilled' ? forecast.value : null,
-                airQuality: airQuality.status === 'fulfilled' ? airQuality.value : null,
-                alerts: [],
-                location: location.displayName || location.name
-            };
-
-            // Check for alerts in current weather
-            if (newWeatherData.current?.alerts) {
-                newWeatherData.alerts = newWeatherData.current.alerts;
+            const params = new URLSearchParams();
+            if (location.lat && location.lon) {
+                params.append('lat', location.lat);
+                params.append('lon', location.lon);
+            } else if (location.city) {
+                params.append('city', location.city);
+                if (location.country) {
+                    params.append('country', location.country);
+                }
             }
 
-            setWeatherData(newWeatherData);
-            setLastUpdate(Date.now());
+            const data = await makeApiCall(`/weather/uv-index?${params}`);
 
-            // Check weather conditions for notifications
-            if (enableNotifications) {
-                checkWeatherConditions(newWeatherData);
+            if (data) {
+                setUvIndex(data);
+            }
+        } catch (error) {
+            console.error('Error fetching UV index:', error);
+        }
+    }, [setUvIndex, makeApiCall]);
+
+    // Fetch activity suggestions
+    const fetchActivitySuggestions = useCallback(async (location, weatherData) => {
+        if (!location || !weatherData) {
+            return;
+        }
+
+        try {
+            const data = await makeApiCall('/recommendations/activities', {
+                method: 'POST',
+                body: JSON.stringify({
+                    location: location,
+                    weather: weatherData
+                })
+            });
+
+            if (data) {
+                setActivitySuggestions(data.suggestions || []);
+            }
+        } catch (error) {
+            console.error('Error fetching activity suggestions:', error);
+        }
+    }, [setActivitySuggestions, makeApiCall]);
+
+    // Fetch clothing suggestions
+    const fetchClothingSuggestions = useCallback(async (location, weatherData) => {
+        if (!location || !weatherData) {
+            return;
+        }
+
+        try {
+            const data = await makeApiCall('/recommendations/clothing', {
+                method: 'POST',
+                body: JSON.stringify({
+                    location: location,
+                    weather: weatherData
+                })
+            });
+
+            if (data) {
+                setClothingSuggestions(data.suggestions || []);
+            }
+        } catch (error) {
+            console.error('Error fetching clothing suggestions:', error);
+        }
+    }, [setClothingSuggestions, makeApiCall]);
+
+    // Comprehensive weather data fetch
+    const fetchAllWeatherData = useCallback(async (location, options = {}) => {
+        const {
+            includeForecast = true,
+            includeAirQuality = true,
+            includeAlerts = true,
+            includeUvIndex = true,
+            includeSuggestions = true
+        } = options;
+
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Fetch current weather first (required)
+            await fetchCurrentWeather(location);
+
+            // Fetch additional data in parallel
+            const promises = [];
+
+            if (includeForecast) {
+                promises.push(fetchForecast(location));
+                promises.push(fetchHourlyForecast(location));
             }
 
-            // Log any failed requests
-            if (current.status === 'rejected') {
-                console.error('Failed to fetch current weather:', current.reason);
+            if (includeAirQuality) {
+                promises.push(fetchAirQuality(location));
             }
-            if (forecast.status === 'rejected') {
-                console.error('Failed to fetch forecast:', forecast.reason);
+
+            if (includeAlerts) {
+                promises.push(fetchWeatherAlerts(location));
             }
-            if (airQuality.status === 'rejected') {
-                console.error('Failed to fetch air quality:', airQuality.reason);
+
+            if (includeUvIndex) {
+                promises.push(fetchUvIndex(location));
+            }
+
+            await Promise.allSettled(promises);
+
+            // Fetch suggestions after weather data is available
+            if (includeSuggestions && currentWeather) {
+                await Promise.allSettled([
+                    fetchActivitySuggestions(location, currentWeather),
+                    fetchClothingSuggestions(location, currentWeather)
+                ]);
             }
 
         } catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error('Error fetching weather data:', error);
-                setError(error.message || ERROR_MESSAGES.API_ERROR);
-            }
+            console.error('Error in fetchAllWeatherData:', error);
+            setError(error.message);
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
-    }, [selectedLocation, fetchCurrentWeather, fetchForecast, fetchAirQuality, enableNotifications, checkWeatherConditions]);
+    }, [
+        fetchCurrentWeather,
+        fetchForecast,
+        fetchHourlyForecast,
+        fetchAirQuality,
+        fetchWeatherAlerts,
+        fetchUvIndex,
+        fetchActivitySuggestions,
+        fetchClothingSuggestions,
+        currentWeather,
+        setLoading,
+        setError
+    ]);
 
-    /**
-     * Refresh weather data
-     */
-    const refreshWeatherData = useCallback(() => {
-        return fetchWeatherData(selectedLocation, true);
-    }, [fetchWeatherData, selectedLocation]);
-
-    /**
-     * Start auto refresh
-     */
-    const startAutoRefresh = useCallback(() => {
-        if (refreshTimer.current) {
-            clearInterval(refreshTimer.current);
+    // Search for locations
+    const searchLocations = useCallback(async (query) => {
+        if (!query || query.trim().length < 2) {
+            return [];
         }
 
-        if (autoRefresh && refreshInterval > 0) {
-            refreshTimer.current = setInterval(() => {
-                fetchWeatherData(selectedLocation);
-            }, refreshInterval);
+        try {
+            const params = new URLSearchParams();
+            params.append('q', query.trim());
+            params.append('limit', '10');
+
+            const data = await makeApiCall(`/locations/search?${params}`);
+            return data?.locations || [];
+        } catch (error) {
+            console.error('Error searching locations:', error);
+            return [];
         }
-    }, [autoRefresh, refreshInterval, fetchWeatherData, selectedLocation]);
+    }, [makeApiCall]);
 
-    /**
-     * Stop auto refresh
-     */
-    const stopAutoRefresh = useCallback(() => {
-        if (refreshTimer.current) {
-            clearInterval(refreshTimer.current);
-            refreshTimer.current = null;
+    // Refresh weather data
+    const refreshWeatherData = useCallback(async (force = false) => {
+        if (!selectedLocation.lat && !selectedLocation.city) {
+            return;
         }
-    }, []);
 
-    /**
-     * Get weather condition icon
-     */
-    const getWeatherIcon = useCallback((iconCode, size = '2x') => {
-        if (!iconCode) return null;
-        return `https://openweathermap.org/img/wn/${iconCode}@${size}.png`;
-    }, []);
+        const now = new Date();
+        const lastUpdate = lastUpdated ? new Date(lastUpdated) : null;
+        const cacheExpiry = userContext.appPreferences.cacheExpiry * 60 * 1000; // Convert to milliseconds
 
-    /**
-     * Get weather description
-     */
-    const getWeatherDescription = useCallback(() => {
-        if (!weatherData.current) return 'No data available';
+        // Check if refresh is needed
+        if (!force && lastUpdate && (now - lastUpdate) < cacheExpiry) {
+            return;
+        }
 
-        const main = weatherData.current.weather?.[0]?.main || '';
-        const description = weatherData.current.weather?.[0]?.description || '';
+        setRefreshing(true);
+        try {
+            await fetchAllWeatherData(selectedLocation);
+        } finally {
+            setRefreshing(false);
+        }
+    }, [selectedLocation, lastUpdated, userContext.appPreferences.cacheExpiry, fetchAllWeatherData]);
 
-        return description.charAt(0).toUpperCase() + description.slice(1);
-    }, [weatherData.current]);
-
-    /**
-     * Get temperature with unit
-     */
-    const getTemperature = useCallback((temp, unit = '°C') => {
-        if (temp === undefined || temp === null) return '--';
-        return `${Math.round(temp)}${unit}`;
-    }, []);
-
-    /**
-     * Check if data is stale
-     */
-    const isDataStale = useCallback((maxAge = 10 * 60 * 1000) => {
-        if (!lastUpdate) return true;
-        return Date.now() - lastUpdate > maxAge;
-    }, [lastUpdate]);
-
-    /**
-     * Get data age in minutes
-     */
-    const getDataAge = useCallback(() => {
-        if (!lastUpdate) return null;
-        return Math.floor((Date.now() - lastUpdate) / (60 * 1000));
-    }, [lastUpdate]);
-
-    // Effect to fetch data when location changes
+    // Auto-refresh setup
     useEffect(() => {
-        if (selectedLocation) {
-            fetchWeatherData(selectedLocation);
+        if (!locationPreferences.autoRefresh || !selectedLocation.lat) {
+            return;
         }
-    }, [selectedLocation, fetchWeatherData]);
 
-    // Effect to handle auto refresh
-    useEffect(() => {
-        if (selectedLocation) {
-            startAutoRefresh();
-        }
+        const interval = locationPreferences.refreshInterval * 60 * 1000; // Convert to milliseconds
+        refreshTimeoutRef.current = setInterval(() => {
+            refreshWeatherData();
+        }, interval);
 
         return () => {
-            stopAutoRefresh();
+            if (refreshTimeoutRef.current) {
+                clearInterval(refreshTimeoutRef.current);
+            }
         };
-    }, [selectedLocation, startAutoRefresh, stopAutoRefresh]);
+    }, [locationPreferences.autoRefresh, locationPreferences.refreshInterval, selectedLocation.lat, refreshWeatherData]);
 
     // Cleanup on unmount
     useEffect(() => {
         return () => {
-            if (abortController.current) {
-                abortController.current.abort();
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
             }
-            stopAutoRefresh();
+            if (refreshTimeoutRef.current) {
+                clearInterval(refreshTimeoutRef.current);
+            }
         };
-    }, [stopAutoRefresh]);
+    }, []);
+
+    // Check if data is stale
+    const isDataStale = useCallback(() => {
+        if (!lastUpdated) return true;
+
+        const now = new Date();
+        const lastUpdate = new Date(lastUpdated);
+        const cacheExpiry = userContext.appPreferences.cacheExpiry * 60 * 1000;
+
+        return (now - lastUpdate) > cacheExpiry;
+    }, [lastUpdated, userContext.appPreferences.cacheExpiry]);
 
     return {
-        // Data
-        ...weatherData,
-
         // State
-        isLoading,
+        currentWeather,
+        forecast,
+        hourlyForecast,
+        airQuality,
+        historicalWeather,
+        weatherAlerts,
+        selectedLocation,
+        loading,
         error,
-        lastUpdate,
+        lastUpdated,
+        refreshing,
 
-        // Methods
-        fetchWeatherData,
+        // Actions
+        fetchCurrentWeather,
+        fetchForecast,
+        fetchHourlyForecast,
+        fetchAirQuality,
+        fetchHistoricalWeather,
+        fetchWeatherAlerts,
+        fetchUvIndex,
+        fetchActivitySuggestions,
+        fetchClothingSuggestions,
+        fetchAllWeatherData,
+        searchLocations,
         refreshWeatherData,
-        startAutoRefresh,
-        stopAutoRefresh,
 
         // Utilities
-        getWeatherIcon,
-        getWeatherDescription,
-        getTemperature,
         isDataStale,
-        getDataAge,
+        hasWeatherData: !!currentWeather,
+        hasLocationSelected: !!(selectedLocation.lat || selectedLocation.city),
 
-        // Computed properties
-        hasData: !!(weatherData.current || weatherData.forecast || weatherData.airQuality),
-        isStale: isDataStale()
+        // Error helpers
+        clearError: () => setError(null),
+        retryLastRequest: () => {
+            if (selectedLocation.lat || selectedLocation.city) {
+                fetchAllWeatherData(selectedLocation);
+            }
+        }
     };
-}
+};
 
 export default useWeather;
