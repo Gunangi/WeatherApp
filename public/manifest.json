@@ -1,8 +1,293 @@
 {
-  "short_name": "WeatherNow",
-  "name": "WeatherNow - React Weather App",
-  "start_url": ".",
+  "name": "WeatherApp - Advanced Weather Forecasting",
+  "short_name": "WeatherApp",
+  "description": "Advanced weather forecasting application with real-time data, air quality monitoring, weather alerts, and smart notifications. Get accurate weather information for any location worldwide.",
+  "version": "1.0.0",
+  "manifest_version": 3,
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff"
+  "orientation": "portrait-primary",
+  "theme_color": "#2563eb",
+  "background_color": "#1e40af",
+  "lang": "en",
+  "dir": "ltr",
+
+  "icons": [
+    {
+      "src": "/icons/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png",
+      "purpose": "favicon"
+    },
+    {
+      "src": "/icons/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "favicon"
+    },
+    {
+      "src": "/icons/android-chrome-36x36.png",
+      "sizes": "36x36",
+      "type": "image/png",
+      "density": "0.75"
+    },
+    {
+      "src": "/icons/android-chrome-48x48.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "density": "1.0"
+    },
+    {
+      "src": "/icons/android-chrome-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "density": "1.5"
+    },
+    {
+      "src": "/icons/android-chrome-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "density": "2.0"
+    },
+    {
+      "src": "/icons/android-chrome-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "density": "3.0"
+    },
+    {
+      "src": "/icons/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/android-chrome-256x256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/android-chrome-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+
+  "categories": [
+    "weather",
+    "utilities",
+    "lifestyle",
+    "productivity"
+  ],
+
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-home.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Main weather dashboard showing current conditions and forecast"
+    },
+    {
+      "src": "/screenshots/mobile-home.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Current weather display on mobile"
+    },
+    {
+      "src": "/screenshots/mobile-forecast.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "5-day weather forecast view"
+    },
+    {
+      "src": "/screenshots/mobile-air-quality.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Air quality monitoring dashboard"
+    },
+    {
+      "src": "/screenshots/desktop-comparison.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Weather comparison between multiple cities"
+    }
+  ],
+
+  "shortcuts": [
+    {
+      "name": "Current Weather",
+      "short_name": "Weather",
+      "description": "View current weather conditions",
+      "url": "/?shortcut=weather",
+      "icons": [
+        {
+          "src": "/icons/shortcut-weather-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "5-Day Forecast",
+      "short_name": "Forecast",
+      "description": "View 5-day weather forecast",
+      "url": "/?shortcut=forecast",
+      "icons": [
+        {
+          "src": "/icons/shortcut-forecast-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Air Quality",
+      "short_name": "Air Quality",
+      "description": "Check air quality index",
+      "url": "/?shortcut=air-quality",
+      "icons": [
+        {
+          "src": "/icons/shortcut-air-quality-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Weather Alerts",
+      "short_name": "Alerts",
+      "description": "View weather alerts and warnings",
+      "url": "/?shortcut=alerts",
+      "icons": [
+        {
+          "src": "/icons/shortcut-alerts-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+
+  "protocol_handlers": [
+    {
+      "protocol": "web+weather",
+      "url": "/?location=%s"
+    }
+  ],
+
+  "prefer_related_applications": false,
+
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+
+  "handle_links": "preferred",
+
+  "scope_extensions": [
+    {
+      "origin": "https://api.openweathermap.org"
+    },
+    {
+      "origin": "https://api.weatherapi.com"
+    }
+  ],
+
+  "permissions": [
+    "geolocation",
+    "notifications",
+    "background-sync",
+    "persistent-storage"
+  ],
+
+  "features": [
+    "cross-origin-isolated"
+  ],
+
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+
+  "file_handlers": [
+    {
+      "action": "/import",
+      "accept": {
+        "application/json": [".json"],
+        "text/csv": [".csv"]
+      }
+    }
+  ],
+
+  "widgets": [
+    {
+      "name": "Current Weather",
+      "short_name": "Weather",
+      "description": "Shows current weather conditions",
+      "tag": "current-weather",
+      "template": "current-weather",
+      "ms_ac_template": "current-weather-adaptive-card.json",
+      "data": "/api/widget/current-weather",
+      "type": "application/json",
+      "screenshots": [
+        {
+          "src": "/screenshots/widget-current-weather.png",
+          "sizes": "256x256",
+          "label": "Current weather widget"
+        }
+      ],
+      "icons": [
+        {
+          "src": "/icons/widget-weather-72x72.png",
+          "sizes": "72x72"
+        }
+      ],
+      "auth": false,
+      "update": 1800
+    }
+  ],
+
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.weatherapp.android",
+      "id": "com.weatherapp.android"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/weatherapp/id123456789",
+      "id": "123456789"
+    }
+  ],
+
+  "iarc_rating_id": "e58c174a-81d2-5c3c-32cc-34b8de4a52e8"
 }

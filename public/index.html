@@ -2,25 +2,369 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#ffffff" />
-    <meta
-            name="description"
-            content="A visually-rich weather application built with React and Spring Boot."
-    />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="description" content="Advanced weather app with real-time forecasts, air quality monitoring, and smart notifications. Stay informed about weather conditions anywhere in the world." />
 
-    <!-- Web App Manifest -->
+    <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="WeatherApp" />
+    <meta name="msapplication-TileColor" content="#2563eb" />
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="WeatherApp - Advanced Weather Forecasting" />
+    <meta property="og:description" content="Get accurate weather forecasts, air quality data, and weather alerts for any location worldwide." />
+    <meta property="og:image" content="%PUBLIC_URL%/icons/weather-og-image.png" />
+    <meta property="og:url" content="https://yourweatherapp.com" />
+    <meta property="og:type" content="website" />
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="WeatherApp - Advanced Weather Forecasting" />
+    <meta name="twitter:description" content="Get accurate weather forecasts, air quality data, and weather alerts for any location worldwide." />
+    <meta name="twitter:image" content="%PUBLIC_URL%/icons/weather-twitter-image.png" />
+
+    <!-- Icons and Splash Screens -->
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="57x57" href="%PUBLIC_URL%/icons/apple-touch-icon-57x57.png" />
+    <link rel="apple-touch-icon" sizes="60x60" href="%PUBLIC_URL%/icons/apple-touch-icon-60x60.png" />
+    <link rel="apple-touch-icon" sizes="72x72" href="%PUBLIC_URL%/icons/apple-touch-icon-72x72.png" />
+    <link rel="apple-touch-icon" sizes="76x76" href="%PUBLIC_URL%/icons/apple-touch-icon-76x76.png" />
+    <link rel="apple-touch-icon" sizes="114x114" href="%PUBLIC_URL%/icons/apple-touch-icon-114x114.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="%PUBLIC_URL%/icons/apple-touch-icon-120x120.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="%PUBLIC_URL%/icons/apple-touch-icon-144x144.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="%PUBLIC_URL%/icons/apple-touch-icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/icons/apple-touch-icon-180x180.png" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/icons/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/icons/favicon-16x16.png" />
+    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
+
+    <!-- Apple Splash Screens -->
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-2048-2732.jpg" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-2732-2048.jpg" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-1668-2388.jpg" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-2388-1668.jpg" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-1536-2048.jpg" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-2048-1536.jpg" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-1242-2688.jpg" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-2688-1242.jpg" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-1125-2436.jpg" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-2436-1125.jpg" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-828-1792.jpg" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-1792-828.jpg" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-1242-2208.jpg" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-2208-1242.jpg" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-750-1334.jpg" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-1334-750.jpg" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-640-1136.jpg" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-1136-640.jpg" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+
+    <!-- PWA Manifest -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
-    <!-- Google Fonts: Using the 'Inter' font for a clean, modern look -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://api.openweathermap.org" />
+    <link rel="preconnect" href="https://api.weatherapi.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <title>WeatherNow - Modern Weather App</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Critical CSS for initial load -->
+    <style>
+        /* Critical CSS for loading state */
+        body {
+            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Loading screen styles */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .loading-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-logo {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 24px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .loading-subtext {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            text-align: center;
+            max-width: 280px;
+            line-height: 1.4;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-top: 24px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Dark mode styles */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+            }
+
+            .loading-screen {
+                background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+            }
+        }
+
+        /* Reduced motion preferences */
+        @media (prefers-reduced-motion: reduce) {
+            .loading-logo {
+                animation: none;
+            }
+
+            .loading-spinner {
+                animation: none;
+            }
+        }
+
+        /* Hide loading screen when app is ready */
+        .app-ready .loading-screen {
+            display: none;
+        }
+    </style>
+
+    <title>WeatherApp - Advanced Weather Forecasting</title>
+
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "WeatherApp",
+            "description": "Advanced weather forecasting application with real-time data, air quality monitoring, and smart notifications",
+            "url": "https://yourweatherapp.com",
+            "applicationCategory": "Weather",
+            "operatingSystem": "Any",
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+            },
+            "author": {
+                "@type": "Organization",
+                "name": "WeatherApp Team"
+            }
+        }
+    </script>
 </head>
 <body>
-<noscript>You need to enable JavaScript to run this app.</noscript>
+<noscript>
+    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+        <h1>JavaScript Required</h1>
+        <p>You need to enable JavaScript to run this weather app.</p>
+        <style>
+            body { background: #f0f0f0; }
+        </style>
+    </div>
+</noscript>
+
+<!-- Loading Screen -->
+<div id="loading-screen" class="loading-screen">
+    <svg class="loading-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="25" r="12" fill="#FFD700"/>
+        <path d="M35 45 Q25 35 15 40 Q20 50 35 45" fill="#87CEEB"/>
+        <path d="M65 45 Q75 35 85 40 Q80 50 65 45" fill="#87CEEB"/>
+        <path d="M50 45 Q40 35 30 40 Q35 50 50 45" fill="#FFFFFF"/>
+        <path d="M50 60 L48 75 M52 60 L54 75 M46 65 L44 80 M56 65 L58 80" stroke="#4169E1" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+
+    <div class="loading-text">WeatherApp</div>
+    <div class="loading-subtext">Loading your personalized weather experience...</div>
+    <div class="loading-spinner"></div>
+</div>
+
+<!-- App Root -->
 <div id="root"></div>
+
+<!-- Offline notification -->
+<div id="offline-notification" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #f59e0b; color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10000; font-family: 'Inter', sans-serif; font-size: 14px;">
+    <span id="offline-text">You're offline. Some features may be limited.</span>
+    <button id="offline-dismiss" style="background: none; border: none; color: white; margin-left: 12px; cursor: pointer; font-size: 16px;">&times;</button>
+</div>
+
+<!-- Update available notification -->
+<div id="update-notification" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #10b981; color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10000; font-family: 'Inter', sans-serif; font-size: 14px;">
+    <span>A new version is available!</span>
+    <button id="update-button" style="background: rgba(255,255,255,0.2); border: none; color: white; margin-left: 12px; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Update</button>
+    <button id="update-dismiss" style="background: none; border: none; color: white; margin-left: 8px; cursor: pointer; font-size: 16px;">&times;</button>
+</div>
+
+<!-- Install PWA prompt -->
+<div id="install-prompt" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #3b82f6; color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10000; font-family: 'Inter', sans-serif; font-size: 14px; max-width: 320px; text-align: center;">
+    <div style="margin-bottom: 8px;">Install WeatherApp for quick access!</div>
+    <button id="install-button" style="background: rgba(255,255,255,0.2); border: none; color: white; margin-right: 8px; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">Install</button>
+    <button id="install-dismiss" style="background: none; border: none; color: white; cursor: pointer; font-size: 16px;">&times;</button>
+</div>
+
+<script>
+    // Hide loading screen when React app is ready
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            var loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+                loadingScreen.classList.add('fade-out');
+                setTimeout(function() {
+                    loadingScreen.style.display = 'none';
+                    document.body.classList.add('app-ready');
+                }, 500);
+            }
+        }, 1000); // Minimum loading time for UX
+    });
+
+    // Network status handling
+    function updateNetworkStatus() {
+        var offlineNotification = document.getElementById('offline-notification');
+        if (navigator.onLine) {
+            offlineNotification.style.display = 'none';
+        } else {
+            offlineNotification.style.display = 'block';
+        }
+    }
+
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+
+    // Dismiss offline notification
+    document.getElementById('offline-dismiss').addEventListener('click', function() {
+        document.getElementById('offline-notification').style.display = 'none';
+    });
+
+    // PWA install prompt handling
+    let deferredPrompt;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+
+        // Show install prompt after 30 seconds if not installed
+        setTimeout(() => {
+            if (deferredPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
+                document.getElementById('install-prompt').style.display = 'block';
+            }
+        }, 30000);
+    });
+
+    document.getElementById('install-button').addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            deferredPrompt = null;
+            document.getElementById('install-prompt').style.display = 'none';
+        }
+    });
+
+    document.getElementById('install-dismiss').addEventListener('click', () => {
+        document.getElementById('install-prompt').style.display = 'none';
+        // Don't show again for this session
+        deferredPrompt = null;
+    });
+
+    // Service worker registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then((registration) => {
+                    console.log('SW registered: ', registration);
+
+                    // Check for updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New version available
+                                document.getElementById('update-notification').style.display = 'block';
+
+                                document.getElementById('update-button').addEventListener('click', () => {
+                                    newWorker.postMessage({ action: 'skipWaiting' });
+                                });
+                            }
+                        });
+                    });
+                })
+                .catch((registrationError) => {
+                    console.log('SW registration failed: ', registrationError);
+                });
+
+            // Handle service worker updates
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+        });
+    }
+
+    // Update notification handling
+    document.getElementById('update-dismiss').addEventListener('click', () => {
+        document.getElementById('update-notification').style.display = 'none';
+    });
+
+    // Performance monitoring
+    window.addEventListener('load', () => {
+        if ('performance' in window && 'measure' in performance) {
+            setTimeout(() => {
+                const perfData = performance.getEntriesByType('navigation')[0];
+                console.log('Page load time:', perfData.loadEventEnd - perfData.loadEventStart);
+            }, 0);
+        }
+    });
+</script>
 </body>
 </html>
