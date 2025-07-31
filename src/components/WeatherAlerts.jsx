@@ -1,374 +1,438 @@
-// src/components/WeatherAlerts.jsx
-import React, { useState, useEffect, useContext } from 'react';
-import {
-    AlertTriangle,
-    CloudRain,
-    Zap,
-    Snowflake,
-    Wind,
-    Thermometer,
-    Sun,
-    Bell,
-    BellOff,
-    X,
-    Settings,
-    MapPin
-} from 'lucide-react';
-import { AppContext } from '../context/AppContext';
+import React, { useState, useEffect } from 'react';
+import { AlertTriangle, Bell, CloudRain, Thermometer, Wind, Zap, Eye, X, Settings, Clock, MapPin } from 'lucide-react';
 
-const WeatherAlerts = ({ weatherData, location, className = "" }) => {
-    const [alerts, setAlerts] = useState([]);
-    const [notificationSettings, setNotificationSettings] = useState({
-        enabled: true,
-        rain: true,
-        temperature: true,
-        wind: true,
-        storm: true,
-        snow: true,
-        uv: true
-    });
-    const [dismissed, setDismissed] = useState(new Set());
+const WeatherAlerts = ({ currentLocation, userPreferences }) => {
+    const [alerts, setAlerts] = useState([
+        {
+            id: 1,
+            type: 'severe',
+            category: 'thunderstorm',
+            title: 'Severe Thunderstorm Warning',
+            description: 'Severe thunderstorms with heavy rain, strong winds up to 80 km/h, and possible hail expected in your area.',
+            location: 'New Delhi, India',
+            severity: 'high',
+            startTime: new Date(Date.now() + 3600000),
+            endTime: new Date(Date.now() + 7200000),
+            isActive: true,
+            icon: '⚡',
+            color: 'red'
+        },
+        {
+            id: 2,
+            type: 'weather',
+            category: 'temperature',
+            title: 'Heat Advisory',
+            description: 'Temperatures will reach 42°C today. Stay hydrated and avoid prolonged outdoor activities.',
+            location: 'New Delhi, India',
+            severity: 'medium',
+            startTime: new Date(Date.now() - 1800000),
+            endTime: new Date(Date.now() + 14400000),
+            isActive: true,
+            icon: '🌡️',
+            color: 'orange'
+        },
+        {
+            id: 3,
+            type: 'custom',
+            category: 'rain',
+            title: 'Rain Alert',
+            description: 'Rain is expected in the next 2 hours with 85% probability. You may want to carry an umbrella.',
+            location: 'Mumbai, India',
+            severity: 'low',
+            startTime: new Date(Date.now() + 1800000),
+            endTime: new Date(Date.now() + 5400000),
+            isActive: true,
+            icon: '🌧️',
+            color: 'blue'
+        },
+        {
+            id: 4,
+            type: 'air_quality',
+            category: 'pollution',
+            title: 'Poor Air Quality Alert',
+            description: 'Air Quality Index is 165 (Unhealthy). Sensitive individuals should avoid outdoor activities.',
+            location: 'New Delhi, India',
+            severity: 'medium',
+            startTime: new Date(Date.now() - 3600000),
+            endTime: new Date(Date.now() + 10800000),
+            isActive: true,
+            icon: '💨',
+            color: 'purple'
+        },
+        {
+            id: 5,
+            type: 'weather',
+            category: 'wind',
+            title: 'Strong Wind Advisory',
+            description: 'Strong winds of 60-70 km/h expected. Secure loose objects and be cautious while driving.',
+            location: 'Chennai, India',
+            severity: 'medium',
+            startTime: new Date(Date.now() - 7200000),
+            endTime: new Date(Date.now() - 3600000),
+            isActive: false,
+            icon: '💨',
+            color: 'gray'
+        }
+    ]);
+
+    const [activeTab, setActiveTab] = useState('active');
     const [showSettings, setShowSettings] = useState(false);
-    const { userId } = useContext(AppContext);
+    const [alertSettings, setAlertSettings] = useState({
+        enableNotifications: true,
+        severeWeather: true,
+        temperature: true,
+        rain: true,
+        airQuality: true,
+        wind: true,
+        customAlerts: true,
+        soundEnabled: true,
+        autoRefresh: true
+    });
 
-    useEffect(() => {
-        // Load notification settings from localStorage
-        const savedSettings = localStorage.getItem(`alertSettings_${userId}`);
-        if (savedSettings) {
-            setNotificationSettings(JSON.parse(savedSettings));
+    const getSeverityColor = (severity) => {
+        switch (severity) {
+            case 'high': return 'border-red-500 bg-red-500/20 text-red-400';
+            case 'medium': return 'border-orange-500 bg-orange-500/20 text-orange-400';
+            case 'low': return 'border-yellow-500 bg-yellow-500/20 text-yellow-400';
+            default: return 'border-gray-500 bg-gray-500/20 text-gray-400';
         }
-
-        // Request notification permission if not already granted
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
-        }
-    }, [userId]);
-
-    useEffect(() => {
-        if (weatherData) {
-            generateAlerts(weatherData);
-        }
-    }, [weatherData, notificationSettings]);
-
-    const saveSettings = (newSettings) => {
-        setNotificationSettings(newSettings);
-        localStorage.setItem(`alertSettings_${userId}`, JSON.stringify(newSettings));
     };
 
-    const generateAlerts = (data) => {
-        const newAlerts = [];
-
-        if (!data || !notificationSettings.enabled) return;
-
-        // Temperature alerts
-        if (notificationSettings.temperature) {
-            if (data.main.temp > 40) {
-                newAlerts.push({
-                    id: 'temp_extreme_heat',
-                    type: 'warning',
-                    icon: <Thermometer className="w-5 h-5 text-red-500" />,
-                    title: 'Extreme Heat Warning',
-                    message: `Temperature is extremely high at ${Math.round(data.main.temp)}°C. Stay hydrated and avoid outdoor activities.`,
-                    severity: 'high',
-                    location: data.name,
-                    timestamp: new Date().toISOString()
-                });
-            } else if (data.main.temp < 5) {
-                newAlerts.push({
-                    id: 'temp_cold',
-                    type: 'advisory',
-                    icon: <Snowflake className="w-5 h-5 text-blue-500" />,
-                    title: 'Cold Weather Advisory',
-                    message: `Temperature is very low at ${Math.round(data.main.temp)}°C. Dress warmly and be cautious of icy conditions.`,
-                    severity: 'medium',
-                    location: data.name,
-                    timestamp: new Date().toISOString()
-                });
-            }
+    const getSeverityIcon = (category) => {
+        switch (category) {
+            case 'thunderstorm': return <Zap className="w-5 h-5" />;
+            case 'temperature': return <Thermometer className="w-5 h-5" />;
+            case 'rain': return <CloudRain className="w-5 h-5" />;
+            case 'wind': return <Wind className="w-5 h-5" />;
+            case 'pollution': return <Eye className="w-5 h-5" />;
+            default: return <AlertTriangle className="w-5 h-5" />;
         }
+    };
 
-        // Wind alerts
-        if (notificationSettings.wind && data.wind && data.wind.speed > 10) {
-            newAlerts.push({
-                id: 'wind_strong',
-                type: 'warning',
-                icon: <Wind className="w-5 h-5 text-yellow-600" />,
-                title: 'Strong Wind Warning',
-                message: `High wind speeds of ${data.wind.speed} m/s detected. Secure loose objects and be cautious while driving.`,
-                severity: 'medium',
-                location: data.name,
-                timestamp: new Date().toISOString()
-            });
-        }
-
-        // Rain/Storm alerts
-        if (notificationSettings.rain) {
-            const condition = data.weather[0].main.toLowerCase();
-            if (condition.includes('thunderstorm') && notificationSettings.storm) {
-                newAlerts.push({
-                    id: 'storm_warning',
-                    type: 'danger',
-                    icon: <Zap className="w-5 h-5 text-purple-600" />,
-                    title: 'Thunderstorm Warning',
-                    message: 'Thunderstorm activity detected in your area. Stay indoors and avoid electrical appliances.',
-                    severity: 'high',
-                    location: data.name,
-                    timestamp: new Date().toISOString()
-                });
-            } else if (condition.includes('rain')) {
-                newAlerts.push({
-                    id: 'rain_alert',
-                    type: 'info',
-                    icon: <CloudRain className="w-5 h-5 text-blue-500" />,
-                    title: 'Rain Alert',
-                    message: 'Rain is expected. Don\'t forget your umbrella and drive carefully.',
-                    severity: 'low',
-                    location: data.name,
-                    timestamp: new Date().toISOString()
-                });
-            }
-        }
-
-        // Snow alerts
-        if (notificationSettings.snow && data.weather[0].main.toLowerCase().includes('snow')) {
-            newAlerts.push({
-                id: 'snow_alert',
-                type: 'warning',
-                icon: <Snowflake className="w-5 h-5 text-blue-400" />,
-                title: 'Snow Alert',
-                message: 'Snow conditions detected. Exercise caution while traveling and dress appropriately.',
-                severity: 'medium',
-                location: data.name,
-                timestamp: new Date().toISOString()
-            });
-        }
-
-        // UV Index alert (mock implementation)
-        if (notificationSettings.uv && data.weather[0].icon.includes('d')) {
-            const uvIndex = Math.round(Math.random() * 11); // Mock UV index
-            if (uvIndex > 7) {
-                newAlerts.push({
-                    id: 'uv_high',
-                    type: 'advisory',
-                    icon: <Sun className="w-5 h-5 text-orange-500" />,
-                    title: 'High UV Index',
-                    message: `UV Index is high (${uvIndex}). Use sunscreen and limit sun exposure between 10 AM - 4 PM.`,
-                    severity: 'medium',
-                    location: data.name,
-                    timestamp: new Date().toISOString()
-                });
-            }
-        }
-
-        // Filter out dismissed alerts
-        const filteredAlerts = newAlerts.filter(alert => !dismissed.has(alert.id));
-        setAlerts(filteredAlerts);
-
-        // Send browser notifications for high severity alerts
-        filteredAlerts.forEach(alert => {
-            if (alert.severity === 'high' && 'Notification' in window && Notification.permission === 'granted') {
-                new Notification(alert.title, {
-                    body: alert.message,
-                    icon: '/weather-icon.png',
-                    tag: alert.id,
-                    requireInteraction: true
-                });
-            }
+    const formatTime = (date) => {
+        return date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
         });
+    };
+
+    const formatDuration = (startTime, endTime) => {
+        const duration = (endTime - startTime) / (1000 * 60 * 60);
+        if (duration < 1) {
+            return `${Math.round(duration * 60)} minutes`;
+        }
+        return `${Math.round(duration)} hours`;
     };
 
     const dismissAlert = (alertId) => {
-        setDismissed(prev => new Set([...prev, alertId]));
         setAlerts(prev => prev.filter(alert => alert.id !== alertId));
     };
 
-    const getAlertStyles = (type) => {
-        switch (type) {
-            case 'danger':
-                return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200';
-            case 'warning':
-                return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200';
-            case 'advisory':
-                return 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-200';
-            case 'info':
-                return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200';
-            default:
-                return 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200';
-        }
+    const toggleAlertSetting = (setting) => {
+        setAlertSettings(prev => ({
+            ...prev,
+            [setting]: !prev[setting]
+        }));
     };
 
-    const formatTime = (timestamp) => {
-        return new Date(timestamp).toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
+    const activeAlerts = alerts.filter(alert => alert.isActive);
+    const pastAlerts = alerts.filter(alert => !alert.isActive);
 
-    if (alerts.length === 0 && !showSettings) return null;
-
-    return (
-        <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg ${className}`}>
-            {/* Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                        <AlertTriangle className="w-5 h-5 text-orange-500" />
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-white">
-                            Weather Alerts
-                        </h3>
-                        {alerts.length > 0 && (
-                            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                                {alerts.length}
-                            </span>
-                        )}
+    const AlertCard = ({ alert, showDismiss = true }) => (
+        <div className={`rounded-2xl border-2 p-4 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] ${getSeverityColor(alert.severity)}`}>
+            <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-white/20">
+                        {getSeverityIcon(alert.category)}
                     </div>
-                    <button
-                        onClick={() => setShowSettings(!showSettings)}
-                        className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    >
-                        <Settings className="w-4 h-4" />
-                    </button>
+                    <div>
+                        <h3 className="font-bold text-white text-lg">{alert.title}</h3>
+                        <div className="flex items-center gap-2 text-sm text-gray-300">
+                            <MapPin className="w-3 h-3" />
+                            <span>{alert.location}</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-2xl">{alert.icon}</span>
+                    {showDismiss && (
+                        <button
+                            onClick={() => dismissAlert(alert.id)}
+                            className="p-1 rounded-full hover:bg-white/20 transition-colors"
+                        >
+                            <X className="w-4 h-4 text-white" />
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {/* Settings Panel */}
-            {showSettings && (
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-                    <h4 className="font-medium text-gray-800 dark:text-white mb-3">
-                        Notification Settings
-                    </h4>
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                                Enable Notifications
-                            </span>
-                            <button
-                                onClick={() => saveSettings({
-                                    ...notificationSettings,
-                                    enabled: !notificationSettings.enabled
-                                })}
-                                className={`w-12 h-6 rounded-full transition-colors ${
-                                    notificationSettings.enabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
-                                }`}
-                            >
-                                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                                    notificationSettings.enabled ? 'translate-x-6' : 'translate-x-0.5'
-                                }`} />
-                            </button>
-                        </div>
+            <p className="text-gray-200 mb-4 leading-relaxed">{alert.description}</p>
 
-                        {Object.entries(notificationSettings).map(([key, value]) => {
-                            if (key === 'enabled') return null;
-                            return (
-                                <div key={key} className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">
-                                        {key} Alerts
-                                    </span>
-                                    <button
-                                        onClick={() => saveSettings({
-                                            ...notificationSettings,
-                                            [key]: !value
-                                        })}
-                                        className={`w-12 h-6 rounded-full transition-colors ${
-                                            value ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
-                                        }`}
-                                        disabled={!notificationSettings.enabled}
-                                    >
-                                        <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                                            value ? 'translate-x-6' : 'translate-x-0.5'
-                                        }`} />
-                                    </button>
-                                </div>
-                            );
-                        })}
+            <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-gray-400" />
+                        <span className="text-gray-300">
+              {formatTime(alert.startTime)} - {formatTime(alert.endTime)}
+            </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <span className="text-gray-400">Duration:</span>
+                        <span className="text-gray-300">{formatDuration(alert.startTime, alert.endTime)}</span>
+                    </div>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    alert.severity === 'high' ? 'bg-red-500/30 text-red-300' :
+                        alert.severity === 'medium' ? 'bg-orange-500/30 text-orange-300' :
+                            'bg-yellow-500/30 text-yellow-300'
+                }`}>
+                    {alert.severity.toUpperCase()}
+                </div>
+            </div>
+        </div>
+    );
+
+    const AlertSettings = () => (
+        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-white">Alert Settings</h3>
+                <button
+                    onClick={() => setShowSettings(false)}
+                    className="p-2 rounded-full hover:bg-white/20 transition-colors"
+                >
+                    <X className="w-4 h-4 text-white" />
+                </button>
+            </div>
+
+            <div className="space-y-4">
+                {Object.entries(alertSettings).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between">
+                        <label className="text-gray-300 capitalize">
+                            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                        </label>
+                        <button
+                            onClick={() => toggleAlertSetting(key)}
+                            className={`w-12 h-6 rounded-full transition-colors ${
+                                value ? 'bg-blue-500' : 'bg-gray-600'
+                            }`}
+                        >
+                            <div
+                                className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                                    value ? 'translate-x-6' : 'translate-x-0.5'
+                                }`}
+                            />
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-white/10">
+                <button className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl font-medium transition-colors">
+                    Save Settings
+                </button>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="p-3 bg-red-500/20 rounded-xl">
+                        <AlertTriangle className="w-6 h-6 text-red-400" />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold text-white">Weather Alerts</h2>
+                        <p className="text-gray-400">Stay informed about weather conditions</p>
+                    </div>
+                </div>
+                <button
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors"
+                >
+                    <Settings className="w-4 h-4" />
+                    Settings
+                </button>
+            </div>
+
+            {/* Settings Panel */}
+            {showSettings && <AlertSettings />}
+
+            {/* Active Alerts Summary */}
+            {activeAlerts.length > 0 && (
+                <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 backdrop-blur-sm rounded-2xl p-4 border border-red-500/30">
+                    <div className="flex items-center gap-3 mb-2">
+                        <Bell className="w-5 h-5 text-red-400 animate-pulse" />
+                        <h3 className="font-bold text-white">Active Weather Alerts</h3>
+                    </div>
+                    <p className="text-gray-200">
+                        You have {activeAlerts.length} active weather alert{activeAlerts.length > 1 ? 's' : ''} for your locations.
+                    </p>
+                    <div className="flex gap-2 mt-3">
+                        {activeAlerts.slice(0, 3).map(alert => (
+                            <span key={alert.id} className="text-xs px-2 py-1 bg-white/20 rounded-full text-white">
+                {alert.category}
+              </span>
+                        ))}
+                        {activeAlerts.length > 3 && (
+                            <span className="text-xs px-2 py-1 bg-white/20 rounded-full text-white">
+                +{activeAlerts.length - 3} more
+              </span>
+                        )}
                     </div>
                 </div>
             )}
 
-            {/* Alerts List */}
-            <div className="p-4">
-                {alerts.length === 0 ? (
-                    <div className="text-center py-8">
-                        <Bell className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                        <p className="text-gray-500 dark:text-gray-400">
-                            No active weather alerts
-                        </p>
-                        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                            You'll be notified of any severe weather conditions
-                        </p>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {alerts.map((alert) => (
-                            <div
-                                key={alert.id}
-                                className={`border rounded-lg p-4 ${getAlertStyles(alert.type)}`}
-                            >
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-start space-x-3">
-                                        <div className="mt-0.5">{alert.icon}</div>
-                                        <div className="flex-1">
-                                            <h5 className="font-semibold mb-1">
-                                                {alert.title}
-                                            </h5>
-                                            <p className="text-sm mb-2">
-                                                {alert.message}
-                                            </p>
-                                            <div className="flex items-center space-x-4 text-xs opacity-75">
-                                                <div className="flex items-center space-x-1">
-                                                    <MapPin className="w-3 h-3" />
-                                                    <span>{alert.location}</span>
-                                                </div>
-                                                <span>{formatTime(alert.timestamp)}</span>
-                                                <span className="capitalize">
-                                                    {alert.severity} severity
-                                                </span>
-                                            </div>
+            {/* Tabs */}
+            <div className="flex bg-white/10 rounded-xl p-1">
+                <button
+                    onClick={() => setActiveTab('active')}
+                    className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        activeTab === 'active'
+                            ? 'bg-blue-500 text-white'
+                            : 'text-gray-300 hover:text-white'
+                    }`}
+                >
+                    Active Alerts ({activeAlerts.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab('history')}
+                    className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        activeTab === 'history'
+                            ? 'bg-blue-500 text-white'
+                            : 'text-gray-300 hover:text-white'
+                    }`}
+                >
+                    Alert History ({pastAlerts.length})
+                </button>
+            </div>
+
+            {/* Alert Content */}
+            <div className="space-y-4">
+                {activeTab === 'active' && (
+                    <>
+                        {activeAlerts.length > 0 ? (
+                            activeAlerts.map(alert => (
+                                <AlertCard key={alert.id} alert={alert} showDismiss={true} />
+                            ))
+                        ) : (
+                            <div className="text-center py-12">
+                                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+                                    <Bell className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                    <h3 className="text-xl font-semibold text-white mb-2">No Active Alerts</h3>
+                                    <p className="text-gray-400 mb-6">All clear! No weather alerts for your locations right now.</p>
+                                    <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                            <span>Monitoring active</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Clock className="w-3 h-3" />
+                                            <span>Last updated: Just now</span>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => dismissAlert(alert.id)}
-                                        className="p-1 rounded-full hover:bg-black hover:bg-opacity-10 transition-colors"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        )}
+                    </>
                 )}
 
-                {/* Notification Permission Request */}
-                {'Notification' in window && Notification.permission === 'default' && (
-                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <Bell className="w-4 h-4 text-blue-600" />
-                                <span className="text-sm text-blue-800 dark:text-blue-200">
-                                    Enable browser notifications for instant alerts
-                                </span>
+                {activeTab === 'history' && (
+                    <>
+                        {pastAlerts.length > 0 ? (
+                            <>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Clock className="w-5 h-5 text-gray-400" />
+                                    <h3 className="font-semibold text-gray-300">Recent Alert History</h3>
+                                </div>
+                                {pastAlerts.map(alert => (
+                                    <AlertCard key={alert.id} alert={alert} showDismiss={false} />
+                                ))}
+                            </>
+                        ) : (
+                            <div className="text-center py-12">
+                                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+                                    <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                    <h3 className="text-xl font-semibold text-white mb-2">No Alert History</h3>
+                                    <p className="text-gray-400">No previous weather alerts to display.</p>
+                                </div>
                             </div>
-                            <button
-                                onClick={() => Notification.requestPermission()}
-                                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-medium"
-                            >
-                                Enable
-                            </button>
-                        </div>
-                    </div>
+                        )}
+                    </>
                 )}
+            </div>
 
-                {/* Notification Blocked Warning */}
-                {'Notification' in window && Notification.permission === 'denied' && (
-                    <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                        <div className="flex items-center space-x-2">
-                            <BellOff className="w-4 h-4 text-red-600" />
-                            <span className="text-sm text-red-800 dark:text-red-200">
-                                Browser notifications are blocked. Enable them in your browser settings for instant alerts.
-                            </span>
+            {/* Alert Types Legend */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+                <h3 className="font-bold text-white mb-4">Alert Types</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-red-500/20 rounded-lg">
+                            <Zap className="w-4 h-4 text-red-400" />
+                        </div>
+                        <div>
+                            <div className="font-medium text-white">Severe Weather</div>
+                            <div className="text-xs text-gray-400">Storms, hurricanes, tornadoes</div>
                         </div>
                     </div>
-                )}
+
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-orange-500/20 rounded-lg">
+                            <Thermometer className="w-4 h-4 text-orange-400" />
+                        </div>
+                        <div>
+                            <div className="font-medium text-white">Temperature</div>
+                            <div className="text-xs text-gray-400">Heat waves, cold snaps</div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-500/20 rounded-lg">
+                            <CloudRain className="w-4 h-4 text-blue-400" />
+                        </div>
+                        <div>
+                            <div className="font-medium text-white">Precipitation</div>
+                            <div className="text-xs text-gray-400">Rain, snow, hail</div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-500/20 rounded-lg">
+                            <Wind className="w-4 h-4 text-green-400" />
+                        </div>
+                        <div>
+                            <div className="font-medium text-white">Wind</div>
+                            <div className="text-xs text-gray-400">Strong winds, gusts</div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-500/20 rounded-lg">
+                            <Eye className="w-4 h-4 text-purple-400" />
+                        </div>
+                        <div>
+                            <div className="font-medium text-white">Air Quality</div>
+                            <div className="text-xs text-gray-400">Pollution, visibility</div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-yellow-500/20 rounded-lg">
+                            <Bell className="w-4 h-4 text-yellow-400" />
+                        </div>
+                        <div>
+                            <div className="font-medium text-white">Custom</div>
+                            <div className="text-xs text-gray-400">User-defined thresholds</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Footer */}
+            <div className="text-center text-sm text-gray-400">
+                Weather alerts are updated every 15 minutes • Last update: {new Date().toLocaleTimeString()}
             </div>
         </div>
     );

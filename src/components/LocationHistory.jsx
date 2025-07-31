@@ -1,268 +1,271 @@
-// src/components/LocationHistory.jsx
-import React, { useState, useEffect, useContext } from 'react';
-import { Clock, MapPin, Star, Trash2, Search } from 'lucide-react';
-import { AppContext } from '../context/AppContext';
+import React, { useState, useEffect } from 'react';
+import { MapPin, Star, Clock, Trash2, Search, Heart, Navigation } from 'lucide-react';
 
-const LocationHistory = ({ onLocationSelect, onToggleFavorite, visible = false }) => {
-    const [recentLocations, setRecentLocations] = useState([]);
-    const [favoriteLocations, setFavoriteLocations] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const { userId } = useContext(AppContext);
+const LocationHistory = ({ onLocationSelect, currentLocation }) => {
+    const [recentSearches, setRecentSearches] = useState([
+        { id: 1, name: 'New Delhi', country: 'India', lat: 28.6139, lon: 77.2090, timestamp: Date.now() - 3600000 },
+        { id: 2, name: 'Mumbai', country: 'India', lat: 19.0760, lon: 72.8777, timestamp: Date.now() - 7200000 },
+        { id: 3, name: 'London', country: 'UK', lat: 51.5074, lon: -0.1278, timestamp: Date.now() - 86400000 },
+        { id: 4, name: 'New York', country: 'USA', lat: 40.7128, lon: -74.0060, timestamp: Date.now() - 172800000 },
+        { id: 5, name: 'Tokyo', country: 'Japan', lat: 35.6762, lon: 139.6503, timestamp: Date.now() - 259200000 }
+    ]);
 
-    useEffect(() => {
-        if (visible) {
-            loadLocationHistory();
-            loadFavoriteLocations();
-        }
-    }, [visible, userId]);
+    const [favoriteLocations, setFavoriteLocations] = useState([
+        { id: 1, name: 'Home - Nagpur', country: 'India', lat: 21.1458, lon: 79.0882, isHome: true },
+        { id: 2, name: 'Paris', country: 'France', lat: 48.8566, lon: 2.3522, isHome: false },
+        { id: 3, name: 'Sydney', country: 'Australia', lat: -33.8688, lon: 151.2093, isHome: false },
+        { id: 4, name: 'Dubai', country: 'UAE', lat: 25.2048, lon: 55.2708, isHome: false }
+    ]);
 
-    const loadLocationHistory = async () => {
-        try {
-            setLoading(true);
-            // In a real app, this would be an API call
-            const savedHistory = localStorage.getItem(`locationHistory_${userId}`);
-            if (savedHistory) {
-                const history = JSON.parse(savedHistory);
-                setRecentLocations(history.slice(0, 10)); // Show last 10 searches
-            }
-        } catch (error) {
-            console.error('Failed to load location history:', error);
-        } finally {
-            setLoading(false);
-        }
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeTab, setActiveTab] = useState('recent');
+
+    const formatTimeAgo = (timestamp) => {
+        const now = Date.now();
+        const diff = now - timestamp;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        return `${days}d ago`;
     };
 
-    const loadFavoriteLocations = async () => {
-        try {
-            // In a real app, this would be an API call to backend
-            const savedFavorites = localStorage.getItem(`favoriteLocations_${userId}`);
-            if (savedFavorites) {
-                setFavoriteLocations(JSON.parse(savedFavorites));
-            }
-        } catch (error) {
-            console.error('Failed to load favorite locations:', error);
-        }
-    };
+    const toggleFavorite = (location) => {
+        const isFavorite = favoriteLocations.some(fav => fav.name === location.name);
 
-    const addToHistory = (location) => {
-        try {
-            const savedHistory = localStorage.getItem(`locationHistory_${userId}`);
-            let history = savedHistory ? JSON.parse(savedHistory) : [];
-
-            // Remove if already exists to avoid duplicates
-            history = history.filter(item => item.name !== location.name);
-
-            // Add to beginning
-            history.unshift({
-                ...location,
-                searchedAt: new Date().toISOString(),
-                searchCount: (history.find(h => h.name === location.name)?.searchCount || 0) + 1
-            });
-
-            // Keep only last 50 items
-            history = history.slice(0, 50);
-
-            localStorage.setItem(`locationHistory_${userId}`, JSON.stringify(history));
-            setRecentLocations(history.slice(0, 10));
-        } catch (error) {
-            console.error('Failed to save location to history:', error);
+        if (isFavorite) {
+            setFavoriteLocations(prev => prev.filter(fav => fav.name !== location.name));
+        } else {
+            const newFavorite = {
+                id: Date.now(),
+                name: location.name,
+                country: location.country,
+                lat: location.lat,
+                lon: location.lon,
+                isHome: false
+            };
+            setFavoriteLocations(prev => [...prev, newFavorite]);
         }
     };
 
-    const toggleFavorite = async (location) => {
-        try {
-            const savedFavorites = localStorage.getItem(`favoriteLocations_${userId}`);
-            let favorites = savedFavorites ? JSON.parse(savedFavorites) : [];
-
-            const existingIndex = favorites.findIndex(fav => fav.name === location.name);
-
-            if (existingIndex >= 0) {
-                // Remove from favorites
-                favorites.splice(existingIndex, 1);
-            } else {
-                // Add to favorites
-                favorites.push({
-                    ...location,
-                    addedAt: new Date().toISOString(),
-                    isDefault: favorites.length === 0 // First favorite becomes default
-                });
-            }
-
-            localStorage.setItem(`favoriteLocations_${userId}`, JSON.stringify(favorites));
-            setFavoriteLocations(favorites);
-
-            onToggleFavorite?.(location, existingIndex === -1);
-        } catch (error) {
-            console.error('Failed to toggle favorite:', error);
-        }
+    const removeFromRecent = (locationId) => {
+        setRecentSearches(prev => prev.filter(location => location.id !== locationId));
     };
 
-    const removeFromHistory = (locationName) => {
-        try {
-            const savedHistory = localStorage.getItem(`locationHistory_${userId}`);
-            if (savedHistory) {
-                let history = JSON.parse(savedHistory);
-                history = history.filter(item => item.name !== locationName);
-                localStorage.setItem(`locationHistory_${userId}`, JSON.stringify(history));
-                setRecentLocations(history.slice(0, 10));
-            }
-        } catch (error) {
-            console.error('Failed to remove from history:', error);
-        }
+    const removeFavorite = (locationId) => {
+        setFavoriteLocations(prev => prev.filter(location => location.id !== locationId));
     };
 
-    const handleLocationSelect = (location) => {
-        addToHistory(location);
-        onLocationSelect?.(location.name);
+    const setAsHome = (location) => {
+        setFavoriteLocations(prev => prev.map(fav => ({
+            ...fav,
+            isHome: fav.id === location.id,
+            name: fav.id === location.id ? `Home - ${fav.name.replace('Home - ', '')}` : fav.name.replace('Home - ', '')
+        })));
     };
 
-    const isFavorite = (locationName) => {
-        return favoriteLocations.some(fav => fav.name === locationName);
+    const filteredRecent = recentSearches.filter(location =>
+        location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        location.country.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const filteredFavorites = favoriteLocations.filter(location =>
+        location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        location.country.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const LocationCard = ({ location, type, onSelect, onRemove, onToggleFavorite, onSetHome }) => {
+        const isFavorite = favoriteLocations.some(fav => fav.name === location.name);
+        const isCurrentLocation = currentLocation &&
+            Math.abs(currentLocation.lat - location.lat) < 0.01 &&
+            Math.abs(currentLocation.lon - location.lon) < 0.01;
+
+        return (
+            <div className={`group bg-white/10 backdrop-blur-sm rounded-2xl p-4 border transition-all duration-300 hover:bg-white/20 hover:scale-[1.02] ${
+                isCurrentLocation ? 'border-blue-400 bg-blue-500/20' : 'border-white/20'
+            }`}>
+                <div className="flex items-center justify-between mb-2">
+                    <div
+                        className="flex items-center gap-3 flex-1 cursor-pointer"
+                        onClick={() => onSelect(location)}
+                    >
+                        <div className="p-2 bg-blue-500/20 rounded-lg">
+                            <MapPin className="w-4 h-4 text-blue-400" />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-white flex items-center gap-2">
+                                {location.name}
+                                {location.isHome && <Navigation className="w-4 h-4 text-green-400" />}
+                                {isCurrentLocation && <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />}
+                            </h3>
+                            <p className="text-sm text-gray-300">{location.country}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {type === 'recent' && (
+                            <button
+                                onClick={() => onToggleFavorite(location)}
+                                className={`p-2 rounded-lg transition-colors ${
+                                    isFavorite ? 'text-red-400 hover:bg-red-500/20' : 'text-gray-400 hover:bg-white/10'
+                                }`}
+                            >
+                                <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+                            </button>
+                        )}
+
+                        {type === 'favorite' && !location.isHome && (
+                            <button
+                                onClick={() => onSetHome(location)}
+                                className="p-2 rounded-lg text-green-400 hover:bg-green-500/20 transition-colors"
+                                title="Set as home"
+                            >
+                                <Navigation className="w-4 h-4" />
+                            </button>
+                        )}
+
+                        <button
+                            onClick={() => onRemove(location.id)}
+                            className="p-2 rounded-lg text-red-400 hover:bg-red-500/20 transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+
+                {type === 'recent' && (
+                    <div className="flex items-center justify-between text-xs text-gray-400 mt-2">
+                        <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{formatTimeAgo(location.timestamp)}</span>
+                        </div>
+                        <span>{location.lat.toFixed(2)}, {location.lon.toFixed(2)}</span>
+                    </div>
+                )}
+
+                {type === 'favorite' && (
+                    <div className="flex items-center justify-between text-xs text-gray-400 mt-2">
+                        <div className="flex items-center gap-1">
+                            <Star className="w-3 h-3 text-yellow-400 fill-current" />
+                            <span>Favorite</span>
+                        </div>
+                        <span>{location.lat.toFixed(2)}, {location.lon.toFixed(2)}</span>
+                    </div>
+                )}
+            </div>
+        );
     };
-
-    const formatTimeAgo = (dateString) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
-
-        if (diffInHours < 1) return 'Just now';
-        if (diffInHours < 24) return `${diffInHours}h ago`;
-        const diffInDays = Math.floor(diffInHours / 24);
-        if (diffInDays < 30) return `${diffInDays}d ago`;
-        const diffInMonths = Math.floor(diffInDays / 30);
-        return `${diffInMonths}mo ago`;
-    };
-
-    if (!visible) return null;
 
     return (
-        <div className="location-history bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto">
-            {loading ? (
-                <div className="p-4 text-center">
-                    <div className="loading-spinner mx-auto"></div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Loading locations...</p>
+        <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white">Locations</h2>
+                <div className="flex bg-white/10 rounded-xl p-1">
+                    <button
+                        onClick={() => setActiveTab('recent')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            activeTab === 'recent'
+                                ? 'bg-blue-500 text-white'
+                                : 'text-gray-300 hover:text-white'
+                        }`}
+                    >
+                        Recent
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('favorites')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            activeTab === 'favorites'
+                                ? 'bg-blue-500 text-white'
+                                : 'text-gray-300 hover:text-white'
+                        }`}
+                    >
+                        Favorites
+                    </button>
                 </div>
-            ) : (
-                <>
-                    {/* Favorite Locations */}
-                    {favoriteLocations.length > 0 && (
-                        <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
-                                <Star className="w-4 h-4 mr-1 text-yellow-500" />
-                                Favorites
-                            </h3>
-                            <div className="space-y-1">
-                                {favoriteLocations.map((location, index) => (
-                                    <div
-                                        key={`fav-${index}`}
-                                        className="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors"
-                                        onClick={() => handleLocationSelect(location)}
-                                    >
-                                        <div className="flex items-center space-x-2 flex-1">
-                                            <MapPin className="w-4 h-4 text-gray-400" />
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                                                    {location.nickname || location.name}
-                                                </p>
-                                                {location.country && (
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                        {location.country}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleFavorite(location);
-                                            }}
-                                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                                        >
-                                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+            </div>
 
-                    {/* Recent Searches */}
-                    {recentLocations.length > 0 && (
-                        <div className="p-3">
-                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
-                                <Clock className="w-4 h-4 mr-1 text-gray-500" />
-                                Recent Searches
-                            </h3>
-                            <div className="space-y-1">
-                                {recentLocations.map((location, index) => (
-                                    <div
-                                        key={`recent-${index}`}
-                                        className="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors"
-                                        onClick={() => handleLocationSelect(location)}
-                                    >
-                                        <div className="flex items-center space-x-2 flex-1">
-                                            <Search className="w-4 h-4 text-gray-400" />
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                                                    {location.name}
-                                                </p>
-                                                <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                                                    {location.country && <span>{location.country}</span>}
-                                                    {location.searchedAt && (
-                                                        <span>• {formatTimeAgo(location.searchedAt)}</span>
-                                                    )}
-                                                    {location.searchCount > 1 && (
-                                                        <span>• {location.searchCount} searches</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center space-x-1">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleFavorite(location);
-                                                }}
-                                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                                            >
-                                                <Star
-                                                    className={`w-4 h-4 ${
-                                                        isFavorite(location.name)
-                                                            ? 'text-yellow-500 fill-current'
-                                                            : 'text-gray-400'
-                                                    }`}
-                                                />
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    removeFromHistory(location.name);
-                                                }}
-                                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                                            >
-                                                <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+            {/* Search Bar */}
+            <div className="relative mb-6">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                    type="text"
+                    placeholder="Search locations..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+            </div>
 
-                    {/* Empty State */}
-                    {recentLocations.length === 0 && favoriteLocations.length === 0 && (
-                        <div className="p-6 text-center">
-                            <Search className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                No recent searches yet
-                            </p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                Start searching for cities to see your history here
-                            </p>
-                        </div>
-                    )}
-                </>
-            )}
+            {/* Content */}
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+                {activeTab === 'recent' && (
+                    <>
+                        {filteredRecent.length > 0 ? (
+                            <>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Clock className="w-5 h-5 text-gray-400" />
+                                    <h3 className="font-semibold text-gray-300">Recent Searches</h3>
+                                </div>
+                                {filteredRecent.map(location => (
+                                    <LocationCard
+                                        key={location.id}
+                                        location={location}
+                                        type="recent"
+                                        onSelect={onLocationSelect}
+                                        onRemove={removeFromRecent}
+                                        onToggleFavorite={toggleFavorite}
+                                    />
+                                ))}
+                            </>
+                        ) : (
+                            <div className="text-center py-8">
+                                <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                <p className="text-gray-400">No recent searches found</p>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {activeTab === 'favorites' && (
+                    <>
+                        {filteredFavorites.length > 0 ? (
+                            <>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Star className="w-5 h-5 text-yellow-400" />
+                                    <h3 className="font-semibold text-gray-300">Favorite Locations</h3>
+                                </div>
+                                {filteredFavorites.map(location => (
+                                    <LocationCard
+                                        key={location.id}
+                                        location={location}
+                                        type="favorite"
+                                        onSelect={onLocationSelect}
+                                        onRemove={removeFavorite}
+                                        onSetHome={setAsHome}
+                                    />
+                                ))}
+                            </>
+                        ) : (
+                            <div className="text-center py-8">
+                                <Star className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                <p className="text-gray-400">No favorite locations yet</p>
+                                <p className="text-sm text-gray-500 mt-2">Add locations to favorites from recent searches</p>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="mt-6 pt-4 border-t border-white/10">
+                <div className="flex items-center justify-between text-sm text-gray-400">
+                    <span>{filteredRecent.length} recent searches</span>
+                    <span>{filteredFavorites.length} favorites</span>
+                </div>
+            </div>
         </div>
     );
 };
