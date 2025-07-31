@@ -1,425 +1,423 @@
-// src/utils/notification.js
-import { NOTIFICATION_TYPES, ALERT_SEVERITIES } from './constants.js';
-import { getNotificationSettings } from './storageUtils.js';
+// Notification types
+export const NOTIFICATION_TYPES = {
+    WEATHER_ALERT: 'weather_alert',
+    RAIN_ALERT: 'rain_alert',
+    TEMPERATURE_ALERT: 'temperature_alert',
+    SEVERE_WEATHER: 'severe_weather',
+    UV_INDEX: 'uv_index',
+    AIR_QUALITY: 'air_quality',
+    DAILY_FORECAST: 'daily_forecast',
+    CUSTOM: 'custom'
+};
+
+// Notification priorities
+export const NOTIFICATION_PRIORITIES = {
+    LOW: 'low',
+    NORMAL: 'normal',
+    HIGH: 'high',
+    URGENT: 'urgent'
+};
+
+// Weather condition icons for notifications
+const WEATHER_ICONS = {
+    sunny: '☀️',
+    cloudy: '☁️',
+    rainy: '🌧️',
+    snowy: '🌨️',
+    stormy: '⛈️',
+    windy: '💨',
+    hot: '🌡️',
+    cold: '❄️',
+    fog: '🌫️'
+};
 
 class NotificationManager {
     constructor() {
-        this.permission = 'default';
+        this.permission = null;
         this.isSupported = 'Notification' in window;
+        this.subscribers = new Map();
         this.activeNotifications = new Map();
-        this.init();
+        this.settings = this.loadSettings();
     }
 
+    // Initialize notification system
     async init() {
-        if (this.isSupported) {
-            this.permission = Notification.permission;
-        }
-    }
-
-    /**
-     * Request notification permission
-     * @returns {Promise<string>} Permission status
-     */
-    async requestPermission() {
         if (!this.isSupported) {
-            throw new Error('Notifications are not supported in this browser');
-        }
-
-        if (this.permission === 'granted') {
-            return 'granted';
+            console.warn('Notifications are not supported in this browser');
+            return false;
         }
 
         try {
+            this.permission = await this.requestPermission();
+            return this.permission === 'granted';
+        } catch (error) {
+            console.error('Failed to initialize notifications:', error);
+            return false;
+        }
+    }
+
+    // Request notification permission
+    async requestPermission() {
+        if (!this.isSupported) return 'denied';
+
+        if (Notification.permission === 'default') {
             const permission = await Notification.requestPermission();
             this.permission = permission;
             return permission;
+        }
+
+        this.permission = Notification.permission;
+        return Notification.permission;
+    }
+
+    // Load notification settings from localStorage
+    loadSettings() {
+        try {
+            const settings = localStorage.getItem('weatherapp_notification_settings');
+            return settings ? JSON.parse(settings) : this.getDefaultSettings();
         } catch (error) {
-            console.error('Error requesting notification permission:', error);
-            return 'denied';
+            console.error('Failed to load notification settings:', error);
+            return this.getDefaultSettings();
         }
     }
 
-    /**
-     * Show a notification
-     * @param {string} title - Notification title
-     * @param {Object} options - Notification options
-     * @returns {Notification|null} Notification instance
-     */
-    async showNotification(title, options = {}) {
-        if (!this.isSupported) {
-            console.warn('Notifications not supported');
+    // Get default notification settings
+    getDefaultSettings() {
+        return {
+            enabled: true,
+            types: {
+                [NOTIFICATION_TYPES.WEATHER_ALERT]: true,
+                [NOTIFICATION_TYPES.RAIN_ALERT]: true,
+                [NOTIFICATION_TYPES.TEMPERATURE_ALERT]: false,
+                [NOTIFICATION_TYPES.SEVERE_WEATHER]: true,
+                [NOTIFICATION_TYPES.UV_INDEX]: false,
+                [NOTIFICATION_TYPES.AIR_QUALITY]: true,
+                [NOTIFICATION_TYPES.DAILY_FORECAST]: false,
+                [NOTIFICATION_TYPES.CUSTOM]: true
+            },
+            sound: true,
+            vibrate: true,
+            showOnLockScreen: true,
+            quietHours: {
+                enabled: false,
+                start: '22:00',
+                end: '07:00'
+            },
+            temperatureThresholds: {
+                high: 35,
+                low: 5
+            },
+            rainThreshold: 0.1,
+            uvIndexThreshold: 6,
+            aqiThreshold: 100
+        };
+    }
+
+    // Save notification settings
+    saveSettings(settings) {
+        try {
+            this.settings = { ...this.settings, ...settings };
+            localStorage.setItem('weatherapp_notification_settings', JSON.stringify(this.settings));
+            return true;
+        } catch (error) {
+            console.error('Failed to save notification settings:', error);
+            return false;
+        }
+    }
+
+    // Check if notifications are in quiet hours
+    isQuietHours() {
+        if (!this.settings.quietHours.enabled) return false;
+
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+
+        const [startHour, startMin] = this.settings.quietHours.start.split(':').map(Number);
+        const [endHour, endMin] = this.settings.quietHours.end.split(':').map(Number);
+
+        const startTime = startHour * 60 + startMin;
+        const endTime = endHour * 60 + endMin;
+
+        if (startTime <= endTime) {
+            return currentTime >= startTime && currentTime <= endTime;
+        } else {
+            // Quiet hours span midnight
+            return currentTime >= startTime || currentTime <= endTime;
+        }
+    }
+
+    // Show notification
+    async showNotification(type, title, message, options = {}) {
+        if (!this.isSupported || this.permission !== 'granted') {
+            console.warn('Notifications not available or permission denied');
             return null;
         }
 
-        if (this.permission !== 'granted') {
-            console.warn('Notification permission not granted');
+        if (!this.settings.enabled || !this.settings.types[type]) {
             return null;
         }
+
+        if (this.isQuietHours() && options.priority !== NOTIFICATION_PRIORITIES.URGENT) {
+            return null;
+        }
+
+        const notificationOptions = {
+            body: message,
+            icon: options.icon || '/icons/weather-icon-192.png',
+            badge: options.badge || '/icons/weather-badge-72.png',
+            tag: options.tag || `weather-${type}-${Date.now()}`,
+            renotify: options.renotify || false,
+            requireInteraction: options.requireInteraction || false,
+            silent: !this.settings.sound || options.silent,
+            vibrate: this.settings.vibrate && options.vibrate !== false ? [200, 100, 200] : [],
+            data: {
+                type,
+                timestamp: Date.now(),
+                priority: options.priority || NOTIFICATION_PRIORITIES.NORMAL,
+                ...options.data
+            },
+            actions: options.actions || []
+        };
 
         try {
-            const notification = new Notification(title, {
-                icon: '/icons/weather-icon-32.png',
-                badge: '/icons/weather-badge-32.png',
-                tag: options.tag || 'weather-app',
-                requireInteraction: options.requireInteraction || false,
-                silent: options.silent || false,
-                ...options
-            });
+            const notification = new Notification(title, notificationOptions);
 
-            // Store notification reference
-            if (options.tag) {
-                this.activeNotifications.set(options.tag, notification);
-            }
+            // Store active notification
+            this.activeNotifications.set(notification.tag, notification);
 
-            // Auto-close after delay
-            if (options.autoClose !== false) {
-                const delay = options.autoCloseDelay || 5000;
-                setTimeout(() => {
-                    notification.close();
-                    if (options.tag) {
-                        this.activeNotifications.delete(options.tag);
-                    }
-                }, delay);
-            }
-
-            // Handle click events
+            // Set up event listeners
             notification.onclick = (event) => {
                 event.preventDefault();
-                window.focus();
-                if (options.onClick) {
-                    options.onClick(event);
-                }
-                notification.close();
-                if (options.tag) {
-                    this.activeNotifications.delete(options.tag);
-                }
+                this.handleNotificationClick(notification);
             };
 
-            // Handle close events
             notification.onclose = () => {
-                if (options.tag) {
-                    this.activeNotifications.delete(options.tag);
-                }
-                if (options.onClose) {
-                    options.onClose();
-                }
+                this.activeNotifications.delete(notification.tag);
             };
+
+            notification.onerror = (error) => {
+                console.error('Notification error:', error);
+                this.activeNotifications.delete(notification.tag);
+            };
+
+            // Auto-close after timeout (except for urgent notifications)
+            if (options.priority !== NOTIFICATION_PRIORITIES.URGENT) {
+                setTimeout(() => {
+                    if (this.activeNotifications.has(notification.tag)) {
+                        notification.close();
+                    }
+                }, options.timeout || 10000);
+            }
 
             return notification;
         } catch (error) {
-            console.error('Error showing notification:', error);
+            console.error('Failed to show notification:', error);
             return null;
         }
     }
 
-    /**
-     * Close notification by tag
-     * @param {string} tag - Notification tag
-     */
-    closeNotification(tag) {
-        const notification = this.activeNotifications.get(tag);
-        if (notification) {
-            notification.close();
-            this.activeNotifications.delete(tag);
+    // Handle notification click
+    handleNotificationClick(notification) {
+        window.focus();
+
+        // Emit event to subscribers
+        this.emit('notificationClick', {
+            type: notification.data.type,
+            data: notification.data
+        });
+
+        notification.close();
+    }
+
+    // Weather-specific notification methods
+    async showWeatherAlert(alertData) {
+        const icon = this.getWeatherIcon(alertData.condition);
+        return this.showNotification(
+            NOTIFICATION_TYPES.WEATHER_ALERT,
+            `Weather Alert - ${alertData.location}`,
+            `${icon} ${alertData.description}`,
+            {
+                priority: alertData.severity === 'severe' ? NOTIFICATION_PRIORITIES.HIGH : NOTIFICATION_PRIORITIES.NORMAL,
+                requireInteraction: alertData.severity === 'severe',
+                data: { location: alertData.location, condition: alertData.condition }
+            }
+        );
+    }
+
+    async showRainAlert(location, rainData) {
+        if (rainData.probability < this.settings.rainThreshold * 100) return null;
+
+        return this.showNotification(
+            NOTIFICATION_TYPES.RAIN_ALERT,
+            `Rain Alert - ${location}`,
+            `🌧️ ${rainData.probability}% chance of rain in the next hour`,
+            {
+                priority: NOTIFICATION_PRIORITIES.NORMAL,
+                data: { location, rainProbability: rainData.probability }
+            }
+        );
+    }
+
+    async showTemperatureAlert(location, temperature, type) {
+        const isHigh = type === 'high';
+        const threshold = isHigh ? this.settings.temperatureThresholds.high : this.settings.temperatureThresholds.low;
+
+        if ((isHigh && temperature < threshold) || (!isHigh && temperature > threshold)) {
+            return null;
+        }
+
+        const icon = isHigh ? '🌡️' : '❄️';
+        const message = `${icon} Temperature ${isHigh ? 'high' : 'low'}: ${temperature}°C`;
+
+        return this.showNotification(
+            NOTIFICATION_TYPES.TEMPERATURE_ALERT,
+            `Temperature Alert - ${location}`,
+            message,
+            {
+                priority: NOTIFICATION_PRIORITIES.NORMAL,
+                data: { location, temperature, type }
+            }
+        );
+    }
+
+    async showSevereWeatherAlert(alertData) {
+        return this.showNotification(
+            NOTIFICATION_TYPES.SEVERE_WEATHER,
+            `⚠️ Severe Weather Alert`,
+            `${alertData.event} warning for ${alertData.location}. ${alertData.description}`,
+            {
+                priority: NOTIFICATION_PRIORITIES.URGENT,
+                requireInteraction: true,
+                data: { ...alertData }
+            }
+        );
+    }
+
+    async showUVIndexAlert(location, uvIndex) {
+        if (uvIndex < this.settings.uvIndexThreshold) return null;
+
+        return this.showNotification(
+            NOTIFICATION_TYPES.UV_INDEX,
+            `UV Index Alert - ${location}`,
+            `☀️ High UV Index: ${uvIndex}. Use sun protection!`,
+            {
+                priority: NOTIFICATION_PRIORITIES.NORMAL,
+                data: { location, uvIndex }
+            }
+        );
+    }
+
+    async showAirQualityAlert(location, aqi, pollutant) {
+        if (aqi < this.settings.aqiThreshold) return null;
+
+        return this.showNotification(
+            NOTIFICATION_TYPES.AIR_QUALITY,
+            `Air Quality Alert - ${location}`,
+            `🏭 Poor air quality (AQI: ${aqi}). Main pollutant: ${pollutant}`,
+            {
+                priority: NOTIFICATION_PRIORITIES.HIGH,
+                data: { location, aqi, pollutant }
+            }
+        );
+    }
+
+    async showDailyForecast(location, forecast) {
+        const icon = this.getWeatherIcon(forecast.condition);
+        return this.showNotification(
+            NOTIFICATION_TYPES.DAILY_FORECAST,
+            `Daily Forecast - ${location}`,
+            `${icon} ${forecast.description}. High: ${forecast.maxTemp}°C, Low: ${forecast.minTemp}°C`,
+            {
+                priority: NOTIFICATION_PRIORITIES.LOW,
+                data: { location, forecast }
+            }
+        );
+    }
+
+    // Get weather icon for condition
+    getWeatherIcon(condition) {
+        const conditionLower = condition.toLowerCase();
+
+        if (conditionLower.includes('sun') || conditionLower.includes('clear')) return WEATHER_ICONS.sunny;
+        if (conditionLower.includes('cloud')) return WEATHER_ICONS.cloudy;
+        if (conditionLower.includes('rain') || conditionLower.includes('drizzle')) return WEATHER_ICONS.rainy;
+        if (conditionLower.includes('snow')) return WEATHER_ICONS.snowy;
+        if (conditionLower.includes('storm') || conditionLower.includes('thunder')) return WEATHER_ICONS.stormy;
+        if (conditionLower.includes('wind')) return WEATHER_ICONS.windy;
+        if (conditionLower.includes('fog') || conditionLower.includes('mist')) return WEATHER_ICONS.fog;
+
+        return WEATHER_ICONS.cloudy;
+    }
+
+    // Event system for notifications
+    subscribe(event, callback) {
+        if (!this.subscribers.has(event)) {
+            this.subscribers.set(event, new Set());
+        }
+        this.subscribers.get(event).add(callback);
+    }
+
+    unsubscribe(event, callback) {
+        if (this.subscribers.has(event)) {
+            this.subscribers.get(event).delete(callback);
         }
     }
 
-    /**
-     * Close all active notifications
-     */
-    closeAllNotifications() {
-        this.activeNotifications.forEach((notification) => {
+    emit(event, data) {
+        if (this.subscribers.has(event)) {
+            this.subscribers.get(event).forEach(callback => {
+                try {
+                    callback(data);
+                } catch (error) {
+                    console.error('Notification callback error:', error);
+                }
+            });
+        }
+    }
+
+    // Clear all active notifications
+    clearAll() {
+        this.activeNotifications.forEach(notification => {
             notification.close();
         });
         this.activeNotifications.clear();
     }
 
-    /**
-     * Check if notifications are enabled for a specific type
-     * @param {string} type - Notification type
-     * @returns {boolean} True if enabled
-     */
-    isNotificationEnabled(type) {
-        const settings = getNotificationSettings();
-        return settings[type] === true;
-    }
-
-    /**
-     * Show weather alert notification
-     * @param {Object} alert - Weather alert data
-     */
-    async showWeatherAlert(alert) {
-        if (!this.isNotificationEnabled('weather_alerts')) return;
-
-        const severity = ALERT_SEVERITIES[alert.severity] || ALERT_SEVERITIES.MINOR;
-
-        await this.showNotification(
-            `Weather Alert: ${alert.event}`,
-            {
-                body: alert.description,
-                icon: this.getAlertIcon(alert.severity),
-                tag: `weather-alert-${alert.id}`,
-                requireInteraction: severity.level >= 3,
-                data: alert,
-                actions: [
-                    {
-                        action: 'view',
-                        title: 'View Details',
-                        icon: '/icons/view-icon.png'
-                    },
-                    {
-                        action: 'dismiss',
-                        title: 'Dismiss',
-                        icon: '/icons/dismiss-icon.png'
-                    }
-                ]
+    // Clear notifications by type
+    clearByType(type) {
+        this.activeNotifications.forEach((notification, tag) => {
+            if (notification.data && notification.data.type === type) {
+                notification.close();
+                this.activeNotifications.delete(tag);
             }
-        );
+        });
     }
 
-    /**
-     * Show rain alert notification
-     * @param {Object} rainData - Rain forecast data
-     */
-    async showRainAlert(rainData) {
-        if (!this.isNotificationEnabled('rain_alerts')) return;
-
-        const message = rainData.intensity > 0.5
-            ? 'Heavy rain expected in the next hour'
-            : 'Light rain expected in the next hour';
-
-        await this.showNotification(
-            '🌧️ Rain Alert',
-            {
-                body: message,
-                tag: 'rain-alert',
-                data: rainData,
-                onClick: () => {
-                    // Navigate to hourly forecast
-                    window.location.hash = '#/forecast/hourly';
-                }
-            }
-        );
+    // Get current settings
+    getSettings() {
+        return { ...this.settings };
     }
 
-    /**
-     * Show temperature alert notification
-     * @param {Object} tempData - Temperature data
-     */
-    async showTemperatureAlert(tempData) {
-        if (!this.isNotificationEnabled('temperature_alerts')) return;
-
-        const { current, threshold, type } = tempData;
-        const message = type === 'high'
-            ? `Temperature has reached ${current}°C, above your threshold of ${threshold}°C`
-            : `Temperature has dropped to ${current}°C, below your threshold of ${threshold}°C`;
-
-        await this.showNotification(
-            '🌡️ Temperature Alert',
-            {
-                body: message,
-                tag: 'temperature-alert',
-                data: tempData
-            }
-        );
-    }
-
-    /**
-     * Show air quality alert notification
-     * @param {Object} aqiData - Air quality data
-     */
-    async showAirQualityAlert(aqiData) {
-        if (!this.isNotificationEnabled('air_quality_alerts')) return;
-
-        const { aqi, level, location } = aqiData;
-
-        await this.showNotification(
-            '💨 Air Quality Alert',
-            {
-                body: `Air quality in ${location} is ${level} (AQI: ${aqi})`,
-                tag: 'air-quality-alert',
-                data: aqiData,
-                onClick: () => {
-                    // Navigate to air quality page
-                    window.location.hash = '#/air-quality';
-                }
-            }
-        );
-    }
-
-    /**
-     * Show severe weather notification
-     * @param {Object} weatherData - Severe weather data
-     */
-    async showSevereWeatherAlert(weatherData) {
-        const { event, severity, description, location } = weatherData;
-
-        await this.showNotification(
-            `⚠️ Severe Weather: ${event}`,
-            {
-                body: `${description} in ${location}`,
-                icon: this.getAlertIcon(severity),
-                tag: 'severe-weather',
-                requireInteraction: true,
-                data: weatherData,
-                vibrate: [200, 100, 200], // Vibration pattern for mobile
-                actions: [
-                    {
-                        action: 'details',
-                        title: 'View Details'
-                    },
-                    {
-                        action: 'safety',
-                        title: 'Safety Tips'
-                    }
-                ]
-            }
-        );
-    }
-
-    /**
-     * Show daily weather summary notification
-     * @param {Object} weatherData - Daily weather summary
-     */
-    async showDailySummary(weatherData) {
-        const { location, condition, temp, forecast } = weatherData;
-
-        await this.showNotification(
-            `🌤️ Today's Weather in ${location}`,
-            {
-                body: `${condition}, ${temp}°C. ${forecast}`,
-                tag: 'daily-summary',
-                autoClose: true,
-                autoCloseDelay: 8000,
-                data: weatherData
-            }
-        );
-    }
-
-    /**
-     * Show reminder notification
-     * @param {Object} reminder - Reminder data
-     */
-    async showReminder(reminder) {
-        const { type, message, action } = reminder;
-
-        await this.showNotification(
-            this.getReminderTitle(type),
-            {
-                body: message,
-                tag: `reminder-${type}`,
-                data: reminder,
-                onClick: () => {
-                    if (action) {
-                        action();
-                    }
-                }
-            }
-        );
-    }
-
-    /**
-     * Get appropriate icon for alert severity
-     * @param {string} severity - Alert severity
-     * @returns {string} Icon path
-     */
-    getAlertIcon(severity) {
-        const icons = {
-            MINOR: '/icons/alert-minor.png',
-            MODERATE: '/icons/alert-moderate.png',
-            SEVERE: '/icons/alert-severe.png',
-            EXTREME: '/icons/alert-extreme.png'
-        };
-        return icons[severity] || icons.MINOR;
-    }
-
-    /**
-     * Get reminder title based on type
-     * @param {string} type - Reminder type
-     * @returns {string} Title
-     */
-    getReminderTitle(type) {
-        const titles = {
-            umbrella: '☂️ Don\'t Forget Your Umbrella',
-            jacket: '🧥 Wear a Jacket',
-            sunscreen: '☀️ Apply Sunscreen',
-            hat: '👒 Wear a Hat',
-            layers: '👕 Dress in Layers'
-        };
-        return titles[type] || '📝 Weather Reminder';
-    }
-
-    /**
-     * Schedule a notification for later
-     * @param {Date} scheduledTime - When to show the notification
-     * @param {string} title - Notification title
-     * @param {Object} options - Notification options
-     * @returns {number} Timeout ID
-     */
-    scheduleNotification(scheduledTime, title, options = {}) {
-        const delay = scheduledTime.getTime() - Date.now();
-
-        if (delay <= 0) {
-            // Show immediately if time has passed
-            this.showNotification(title, options);
-            return null;
-        }
-
-        return setTimeout(() => {
-            this.showNotification(title, options);
-        }, delay);
-    }
-
-    /**
-     * Cancel scheduled notification
-     * @param {number} timeoutId - Timeout ID from scheduleNotification
-     */
-    cancelScheduledNotification(timeoutId) {
-        if (timeoutId) {
-            clearTimeout(timeoutId);
-        }
-    }
-
-    /**
-     * Test notification system
-     */
-    async testNotification() {
-        await this.showNotification(
-            'Weather App Test',
-            {
-                body: 'Notifications are working correctly!',
-                tag: 'test-notification',
-                autoClose: true,
-                autoCloseDelay: 3000
-            }
-        );
+    // Check if notification type is enabled
+    isEnabled(type) {
+        return this.settings.enabled && this.settings.types[type];
     }
 }
 
 // Create singleton instance
 const notificationManager = new NotificationManager();
 
-// Export notification functions
-export const requestPermission = () => notificationManager.requestPermission();
-export const showNotification = (title, options) => notificationManager.showNotification(title, options);
-export const closeNotification = (tag) => notificationManager.closeNotification(tag);
-export const closeAllNotifications = () => notificationManager.closeAllNotifications();
+// Export the manager and types
+export { notificationManager as default, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES };
 
-export const showWeatherAlert = (alert) => notificationManager.showWeatherAlert(alert);
-export const showRainAlert = (rainData) => notificationManager.showRainAlert(rainData);
-export const showTemperatureAlert = (tempData) => notificationManager.showTemperatureAlert(tempData);
-export const showAirQualityAlert = (aqiData) => notificationManager.showAirQualityAlert(aqiData);
-export const showSevereWeatherAlert = (weatherData) => notificationManager.showSevereWeatherAlert(weatherData);
-export const showDailySummary = (weatherData) => notificationManager.showDailySummary(weatherData);
-export const showReminder = (reminder) => notificationManager.showReminder(reminder);
-
-export const scheduleNotification = (time, title, options) => notificationManager.scheduleNotification(time, title, options);
-export const cancelScheduledNotification = (id) => notificationManager.cancelScheduledNotification(id);
-
-export const isNotificationEnabled = (type) => notificationManager.isNotificationEnabled(type);
-export const testNotification = () => notificationManager.testNotification();
-
-export const getNotificationPermission = () => notificationManager.permission;
-export const isNotificationSupported = () => notificationManager.isSupported;
-
-export default notificationManager;
+// Convenience functions
+export const initNotifications = () => notificationManager.init();
+export const showWeatherAlert = (alertData) => notificationManager.showWeatherAlert(alertData);
+export const showRainAlert = (location, rainData) => notificationManager.showRainAlert(location, rainData);
+export const showTemperatureAlert = (location, temp, type) => notificationManager.showTemperatureAlert(location, temp, type);
+export const showSevereWeatherAlert = (alertData) => notificationManager.showSevereWeatherAlert(alertData);
+export const showUVIndexAlert = (location, uvIndex) => notificationManager.showUVIndexAlert(location, uvIndex);
+export const showAirQualityAlert = (location, aqi, pollutant) => notificationManager.showAirQualityAlert(location, aqi, pollutant);
+export const showDailyForecast = (location, forecast) => notificationManager.showDailyForecast(location, forecast);
+export const getNotificationSettings = () => notificationManager.getSettings();
+export const saveNotificationSettings = (settings) => notificationManager.saveSettings(settings);
