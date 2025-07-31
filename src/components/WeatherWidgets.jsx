@@ -51,7 +51,7 @@ const WeatherWidgets = () => {
             sizes: ['small', 'medium']
         },
         forecast: {
-            name: '5-Day Forecast',
+            name: '5-Day ForecastCards',
             icon: Grid,
             color: 'bg-gray-500',
             sizes: ['large']

@@ -100,7 +100,7 @@
         background: linear-gradient(135deg, rgba(31,41,55,0.8) 0%, rgba(31,41,55,0.6) 100%);
     }
 
-    /* Forecast card styling */
+    /* ForecastCards card styling */
     .forecast-card {
         @apply glass-card p-6;
         @apply hover:bg-blue-50/50 dark:hover:bg-gray-700/50;

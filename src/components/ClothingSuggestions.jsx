@@ -411,7 +411,7 @@ const ClothingSuggestions = ({ weatherData, forecastData, userPreferences = {} }
                 </div>
             </div>
 
-            {/* 5-Day Clothing Forecast */}
+            {/* 5-Day Clothing ForecastCards */}
             {forecastData && (
                 <div className="bg-gradient-to-br from-orange-500/20 to-red-500/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
                     <h3 className="text-lg font-semibold text-white mb-4">5-Day Clothing Forecast</h3>
