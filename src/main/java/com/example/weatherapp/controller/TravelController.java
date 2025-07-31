@@ -21,7 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/travel")
 @CrossOrigin(origins = "*")
-public class TravelWeatherController {
+public class TravelController {
 
     @Autowired
     private WeatherService weatherService;
