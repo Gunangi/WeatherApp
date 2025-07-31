@@ -1,328 +1,206 @@
-// src/components/AirQuality.jsx
-import React, { useState, useEffect } from 'react';
-import {
-    Wind,
-    AlertTriangle,
-    CheckCircle,
-    XCircle,
-    Activity,
-    Lung,
-    Eye,
-    Heart,
-    Info
-} from 'lucide-react';
+import React from 'react';
+import { Wind, AlertTriangle, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
-const AirQuality = ({ weatherData, className = "" }) => {
-    const [aqiData, setAqiData] = useState(null);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        if (weatherData && weatherData.coord) {
-            generateAQIData(weatherData.coord);
-        }
-    }, [weatherData]);
-
-    const generateAQIData = (coordinates) => {
-        setLoading(true);
-
-        // Mock AQI data generation based on location and weather
-        // In real app, this would be an API call to air quality service
-        setTimeout(() => {
-            const mockAQI = {
-                aqi: Math.floor(Math.random() * 300) + 1, // 1-300 scale
-                co: (Math.random() * 10 + 0.1).toFixed(1), // Carbon Monoxide
-                no2: (Math.random() * 100 + 10).toFixed(1), // Nitrogen Dioxide
-                o3: (Math.random() * 200 + 20).toFixed(1), // Ozone
-                so2: (Math.random() * 50 + 5).toFixed(1), // Sulfur Dioxide
-                pm2_5: (Math.random() * 100 + 10).toFixed(1), // PM2.5
-                pm10: (Math.random() * 150 + 20).toFixed(1), // PM10
-                nh3: (Math.random() * 30 + 5).toFixed(1), // Ammonia
-                timestamp: new Date().toISOString(),
-                location: {
-                    lat: coordinates.lat,
-                    lon: coordinates.lon
-                }
-            };
-
-            setAqiData(mockAQI);
-            setLoading(false);
-        }, 1000);
+const AirQuality = ({ airQualityData, isDark = false }) => {
+    // Mock data if no airQualityData provided
+    const data = airQualityData || {
+        aqi: 125,
+        category: 'Unhealthy for Sensitive Groups',
+        pollutants: {
+            co: 0.8,      // Carbon Monoxide (mg/m³)
+            no2: 45,      // Nitrogen Dioxide (μg/m³)
+            o3: 78,       // Ozone (μg/m³)
+            so2: 12,      // Sulfur Dioxide (μg/m³)
+            pm25: 35,     // PM2.5 (μg/m³)
+            pm10: 58      // PM10 (μg/m³)
+        },
+        recommendations: [
+            'Limit outdoor activities',
+            'Keep windows closed',
+            'Use air purifiers indoors',
+            'Wear masks when going outside'
+        ]
     };
 
-    const getAQILevel = (aqi) => {
-        if (aqi <= 50) {
-            return {
-                level: 'Good',
-                color: 'bg-green-500',
-                bgColor: 'bg-green-50 dark:bg-green-900/20',
-                textColor: 'text-green-800 dark:text-green-200',
-                borderColor: 'border-green-200 dark:border-green-800',
-                icon: <CheckCircle className="w-5 h-5 text-green-600" />,
-                description: 'Air quality is satisfactory for most people',
-                healthAdvice: 'Enjoy outdoor activities!'
-            };
-        } else if (aqi <= 100) {
-            return {
-                level: 'Moderate',
-                color: 'bg-yellow-500',
-                bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
-                textColor: 'text-yellow-800 dark:text-yellow-200',
-                borderColor: 'border-yellow-200 dark:border-yellow-800',
-                icon: <Info className="w-5 h-5 text-yellow-600" />,
-                description: 'Air quality is acceptable for most people',
-                healthAdvice: 'Sensitive individuals should consider limiting outdoor activities'
-            };
-        } else if (aqi <= 150) {
-            return {
-                level: 'Unhealthy for Sensitive Groups',
-                color: 'bg-orange-500',
-                bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-                textColor: 'text-orange-800 dark:text-orange-200',
-                borderColor: 'border-orange-200 dark:border-orange-800',
-                icon: <AlertTriangle className="w-5 h-5 text-orange-600" />,
-                description: 'Sensitive people may experience health effects',
-                healthAdvice: 'Children, elderly, and people with heart/lung conditions should reduce outdoor activities'
-            };
-        } else if (aqi <= 200) {
-            return {
-                level: 'Unhealthy',
-                color: 'bg-red-500',
-                bgColor: 'bg-red-50 dark:bg-red-900/20',
-                textColor: 'text-red-800 dark:text-red-200',
-                borderColor: 'border-red-200 dark:border-red-800',
-                icon: <XCircle className="w-5 h-5 text-red-600" />,
-                description: 'Everyone may experience health effects',
-                healthAdvice: 'Avoid outdoor activities, especially prolonged or heavy exertion'
-            };
-        } else if (aqi <= 300) {
-            return {
-                level: 'Very Unhealthy',
-                color: 'bg-purple-600',
-                bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-                textColor: 'text-purple-800 dark:text-purple-200',
-                borderColor: 'border-purple-200 dark:border-purple-800',
-                icon: <XCircle className="w-5 h-5 text-purple-600" />,
-                description: 'Health alert: serious health effects for everyone',
-                healthAdvice: 'Avoid all outdoor activities and stay indoors'
-            };
-        } else {
-            return {
-                level: 'Hazardous',
-                color: 'bg-red-800',
-                bgColor: 'bg-red-100 dark:bg-red-900/40',
-                textColor: 'text-red-900 dark:text-red-100',
-                borderColor: 'border-red-300 dark:border-red-700',
-                icon: <XCircle className="w-5 h-5 text-red-800" />,
-                description: 'Emergency conditions: everyone affected',
-                healthAdvice: 'Everyone should avoid outdoor activities and stay indoors with air purifiers'
-            };
+    const getAQIColor = (aqi) => {
+        if (aqi <= 50) return { bg: 'bg-green-500', text: 'text-green-500', ring: 'ring-green-500' };
+        if (aqi <= 100) return { bg: 'bg-yellow-500', text: 'text-yellow-500', ring: 'ring-yellow-500' };
+        if (aqi <= 150) return { bg: 'bg-orange-500', text: 'text-orange-500', ring: 'ring-orange-500' };
+        if (aqi <= 200) return { bg: 'bg-red-500', text: 'text-red-500', ring: 'ring-red-500' };
+        if (aqi <= 300) return { bg: 'bg-purple-500', text: 'text-purple-500', ring: 'ring-purple-500' };
+        return { bg: 'bg-red-800', text: 'text-red-800', ring: 'ring-red-800' };
+    };
+
+    const getAQIIcon = (aqi) => {
+        const iconProps = { size: 24 };
+        if (aqi <= 50) return <CheckCircle {...iconProps} className="text-green-500" />;
+        if (aqi <= 100) return <AlertCircle {...iconProps} className="text-yellow-500" />;
+        if (aqi <= 150) return <AlertTriangle {...iconProps} className="text-orange-500" />;
+        return <XCircle {...iconProps} className="text-red-500" />;
+    };
+
+    const getHealthImpact = (aqi) => {
+        if (aqi <= 50) return 'Good - Air quality is satisfactory';
+        if (aqi <= 100) return 'Moderate - Acceptable for most people';
+        if (aqi <= 150) return 'Unhealthy for Sensitive Groups';
+        if (aqi <= 200) return 'Unhealthy - Everyone may experience effects';
+        if (aqi <= 300) return 'Very Unhealthy - Health alert';
+        return 'Hazardous - Health warnings of emergency conditions';
+    };
+
+    const getPollutantLevel = (pollutant, value) => {
+        const levels = {
+            co: { good: 1, moderate: 2, bad: 4 },
+            no2: { good: 40, moderate: 80, bad: 120 },
+            o3: { good: 60, moderate: 120, bad: 180 },
+            so2: { good: 20, moderate: 80, bad: 250 },
+            pm25: { good: 12, moderate: 35, bad: 55 },
+            pm10: { good: 25, moderate: 50, bad: 90 }
+        };
+
+        const level = levels[pollutant];
+        if (!level) return 'good';
+
+        if (value <= level.good) return 'good';
+        if (value <= level.moderate) return 'moderate';
+        return 'bad';
+    };
+
+    const getPollutantColor = (level) => {
+        switch (level) {
+            case 'good': return 'text-green-500';
+            case 'moderate': return 'text-yellow-500';
+            case 'bad': return 'text-red-500';
+            default: return 'text-gray-500';
         }
     };
 
-    const getPollutantInfo = (pollutant, value) => {
-        const pollutantData = {
-            co: {
-                name: 'Carbon Monoxide',
-                unit: 'μg/m³',
-                icon: <Activity className="w-4 h-4" />,
-                safeLevel: 10,
-                description: 'Colorless, odorless gas that can be harmful'
-            },
-            no2: {
-                name: 'Nitrogen Dioxide',
-                unit: 'μg/m³',
-                icon: <Lung className="w-4 h-4" />,
-                safeLevel: 40,
-                description: 'Gas that can cause respiratory problems'
-            },
-            o3: {
-                name: 'Ozone',
-                unit: 'μg/m³',
-                icon: <Eye className="w-4 h-4" />,
-                safeLevel: 120,
-                description: 'Ground-level ozone can irritate airways'
-            },
-            so2: {
-                name: 'Sulfur Dioxide',
-                unit: 'μg/m³',
-                icon: <Wind className="w-4 h-4" />,
-                safeLevel: 20,
-                description: 'Gas that can cause breathing difficulties'
-            },
-            pm2_5: {
-                name: 'PM2.5',
-                unit: 'μg/m³',
-                icon: <Activity className="w-4 h-4" />,
-                safeLevel: 15,
-                description: 'Fine particles that can penetrate deep into lungs'
-            },
-            pm10: {
-                name: 'PM10',
-                unit: 'μg/m³',
-                icon: <Lung className="w-4 h-4" />,
-                safeLevel: 45,
-                description: 'Particles that can cause respiratory issues'
-            },
-            nh3: {
-                name: 'Ammonia',
-                unit: 'μg/m³',
-                icon: <Heart className="w-4 h-4" />,
-                safeLevel: 400,
-                description: 'Gas with strong odor, can irritate airways'
-            }
-        };
-
-        const info = pollutantData[pollutant];
-        const isHigh = parseFloat(value) > info.safeLevel;
-
-        return {
-            ...info,
-            isHigh,
-            status: isHigh ? 'High' : 'Normal'
-        };
-    };
-
-    if (loading) {
-        return (
-            <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 ${className}`}>
-                <div className="flex items-center space-x-2 mb-4">
-                    <Wind className="w-5 h-5 text-gray-400" />
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-white">
-                        Air Quality Index
-                    </h3>
-                </div>
-                <div className="flex items-center justify-center py-8">
-                    <div className="loading-spinner"></div>
-                    <span className="ml-3 text-gray-600 dark:text-gray-400">Loading air quality data...</span>
-                </div>
-            </div>
-        );
-    }
-
-    if (!aqiData) {
-        return (
-            <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 ${className}`}>
-                <div className="flex items-center space-x-2 mb-4">
-                    <Wind className="w-5 h-5 text-gray-400" />
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-white">
-                        Air Quality Index
-                    </h3>
-                </div>
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                    Air quality data not available
-                </p>
-            </div>
-        );
-    }
-
-    const aqiInfo = getAQILevel(aqiData.aqi);
+    const colors = getAQIColor(data.aqi);
 
     return (
-        <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden ${className}`}>
+        <div className={`rounded-3xl p-6 backdrop-blur-md border transition-all duration-300 ${
+            isDark
+                ? 'bg-gray-900/30 border-gray-700/50'
+                : 'bg-white/20 border-white/30'
+        } shadow-2xl`}>
+
             {/* Header */}
-            <div className="p-6 pb-4">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-2">
-                        {aqiInfo.icon}
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-white">
-                            Air Quality Index
+            <div className="flex items-center gap-3 mb-6">
+                <Wind size={28} className={isDark ? 'text-blue-400' : 'text-blue-600'} />
+                <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                    Air Quality
+                </h2>
+            </div>
+
+            {/* AQI Display */}
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                    <div className={`relative w-20 h-20 rounded-full ${colors.bg}/20 flex items-center justify-center`}>
+                        <div className={`w-16 h-16 rounded-full ${colors.bg}/30 flex items-center justify-center`}>
+              <span className={`text-2xl font-bold ${colors.text}`}>
+                {data.aqi}
+              </span>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                            AQI {data.aqi}
                         </h3>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {new Date(aqiData.timestamp).toLocaleTimeString('en-US', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            })}
-                        </div>
-                    </div>
-                </div>
-
-                {/* AQI Display */}
-                <div className="text-center mb-6">
-                    <div className="flex items-center justify-center space-x-4 mb-3">
-                        <div className={`w-20 h-20 rounded-full ${aqiInfo.color} text-white text-2xl font-bold flex items-center justify-center shadow-lg`}>
-                            {aqiData.aqi}
-                        </div>
-                        <div className="text-left">
-                            <p className="text-2xl font-bold text-gray-800 dark:text-white">
-                                {aqiInfo.level}
-                            </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                AQI Level
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className={`p-4 rounded-xl border ${aqiInfo.bgColor} ${aqiInfo.borderColor}`}>
-                        <p className={`text-sm font-medium ${aqiInfo.textColor} mb-2`}>
-                            {aqiInfo.description}
-                        </p>
-                        <p className={`text-xs ${aqiInfo.textColor}`}>
-                            {aqiInfo.healthAdvice}
+                        <p className={`${colors.text} font-medium`}>{data.category}</p>
+                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {getHealthImpact(data.aqi)}
                         </p>
                     </div>
                 </div>
+                {getAQIIcon(data.aqi)}
+            </div>
 
-                {/* Pollutants Grid */}
-                <div className="mb-6">
-                    <h4 className="text-md font-semibold text-gray-800 dark:text-white mb-3">
-                        Pollutant Levels
+            {/* Pollutants Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                {Object.entries(data.pollutants).map(([pollutant, value]) => {
+                    const level = getPollutantLevel(pollutant, value);
+                    const colorClass = getPollutantColor(level);
+
+                    return (
+                        <div
+                            key={pollutant}
+                            className={`p-4 rounded-xl backdrop-blur-sm border ${
+                                isDark
+                                    ? 'bg-white/5 border-white/10'
+                                    : 'bg-white/30 border-white/20'
+                            }`}
+                        >
+                            <div className="flex justify-between items-center mb-2">
+                <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {pollutant.toUpperCase()}
+                </span>
+                                <div className={`w-2 h-2 rounded-full ${
+                                    level === 'good' ? 'bg-green-500' :
+                                        level === 'moderate' ? 'bg-yellow-500' : 'bg-red-500'
+                                }`} />
+                            </div>
+                            <div className={`text-lg font-semibold ${colorClass}`}>
+                                {value} {pollutant.includes('co') ? 'mg/m³' : 'μg/m³'}
+                            </div>
+                            <div className={`text-xs capitalize ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {level}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Health Recommendations */}
+            <div className={`p-4 rounded-xl backdrop-blur-sm border ${
+                isDark
+                    ? 'bg-white/5 border-white/10'
+                    : 'bg-white/30 border-white/20'
+            }`}>
+                <div className="flex items-center gap-2 mb-3">
+                    <AlertTriangle size={18} className={colors.text} />
+                    <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                        Health Recommendations
                     </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {Object.entries(aqiData).map(([key, value]) => {
-                            if (!['co', 'no2', 'o3', 'so2', 'pm2_5', 'pm10', 'nh3'].includes(key)) return null;
-
-                            const pollutantInfo = getPollutantInfo(key, value);
-
-                            return (
-                                <div key={key} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
-                                    <div className="flex items-center justify-center space-x-1 mb-2">
-                                        {pollutantInfo.icon}
-                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                            {pollutantInfo.name}
-                                        </span>
-                                    </div>
-                                    <p className={`text-lg font-bold ${pollutantInfo.isHigh ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                                        {value}
-                                    </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        {pollutantInfo.unit}
-                                    </p>
-                                    <p className={`text-xs font-medium mt-1 ${pollutantInfo.isHigh ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                                        {pollutantInfo.status}
-                                    </p>
-                                </div>
-                            );
-                        })}
-                    </div>
                 </div>
+                <ul className="space-y-2">
+                    {data.recommendations.map((rec, index) => (
+                        <li
+                            key={index}
+                            className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
+                        >
+                            <div className={`w-1.5 h-1.5 rounded-full ${colors.bg}`} />
+                            {rec}
+                        </li>
+                    ))}
+                </ul>
             </div>
 
             {/* AQI Scale Reference */}
-            <div className="px-6 pb-6 border-t border-gray-200 dark:border-gray-700 pt-4">
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-white mb-3">
+            <div className="mt-6 pt-4 border-t border-white/20">
+                <h5 className={`text-sm font-medium mb-3 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                     AQI Scale
-                </h4>
-                <div className="space-y-2">
-                    {[
-                        { range: '0-50', level: 'Good', color: 'bg-green-500' },
-                        { range: '51-100', level: 'Moderate', color: 'bg-yellow-500' },
-                        { range: '101-150', level: 'Unhealthy for Sensitive', color: 'bg-orange-500' },
-                        { range: '151-200', level: 'Unhealthy', color: 'bg-red-500' },
-                        { range: '201-300', level: 'Very Unhealthy', color: 'bg-purple-600' },
-                        { range: '301+', level: 'Hazardous', color: 'bg-red-800' }
-                    ].map((scale, index) => (
-                        <div key={index} className="flex items-center space-x-3">
-                            <div className={`w-4 h-4 ${scale.color} rounded`}></div>
-                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-16">
-                                {scale.range}
-                            </span>
-                            <span className="text-xs text-gray-600 dark:text-gray-400">
-                                {scale.level}
-                            </span>
-                        </div>
-                    ))}
+                </h5>
+                <div className="flex justify-between text-xs">
+                    <div className="text-center">
+                        <div className="w-4 h-2 bg-green-500 rounded mb-1" />
+                        <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>0-50</span>
+                    </div>
+                    <div className="text-center">
+                        <div className="w-4 h-2 bg-yellow-500 rounded mb-1" />
+                        <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>51-100</span>
+                    </div>
+                    <div className="text-center">
+                        <div className="w-4 h-2 bg-orange-500 rounded mb-1" />
+                        <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>101-150</span>
+                    </div>
+                    <div className="text-center">
+                        <div className="w-4 h-2 bg-red-500 rounded mb-1" />
+                        <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>151-200</span>
+                    </div>
+                    <div className="text-center">
+                        <div className="w-4 h-2 bg-purple-500 rounded mb-1" />
+                        <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>201-300</span>
+                    </div>
                 </div>
             </div>
         </div>
