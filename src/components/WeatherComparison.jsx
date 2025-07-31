@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, BarChart3, TrendingUp, TrendingDown, Droplets, Wind, Eye, Thermometer } from 'lucide-react';
+import WeatherAlerts from "./WeatherAlerts";
 
 const WeatherComparison = ({ onAddLocation }) => {
     const [comparedCities, setComparedCities] = useState([
@@ -413,3 +414,5 @@ return (
         )}
     </div>
 );
+
+
