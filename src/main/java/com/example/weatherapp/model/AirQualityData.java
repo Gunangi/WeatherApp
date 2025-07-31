@@ -9,7 +9,7 @@ import lombok.Builder;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AirQualityComponents {
+public class AirQualityData {
     private double co;      // Carbon monoxide
     private double no;      // Nitric oxide
     private double no2;     // Nitrogen dioxide

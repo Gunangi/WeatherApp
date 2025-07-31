@@ -22,7 +22,7 @@ public class DashboardData {
     private ClothingRecommendation clothingAdvice;
     private List<WeatherWidget> userWidgets;
     private List<WeatherJournalEntry> recentJournalEntries;
-    private AirQualityComponents airQuality;
+    private AirQualityData airQuality;
     private String moonPhase;
     private List<WeatherReminder> upcomingReminders;
 }

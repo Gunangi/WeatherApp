@@ -1,7 +1,6 @@
 // src/main/java/com/example/weatherapp/controller/UserController.java
 package com.example.weatherapp.controller;
 
-import com.example.weatherapp.model.EnhancedWeatherPreferences;
 import com.example.weatherapp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

@@ -2,7 +2,6 @@
 package com.example.weatherapp.controller;
 
 import com.example.weatherapp.model.WeatherAlert;
-import com.example.weatherapp.model.AlertType;
 import com.example.weatherapp.service.WeatherAlertService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -10,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/alerts")

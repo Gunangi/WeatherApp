@@ -3,7 +3,6 @@ package com.example.weatherapp.service;
 import com.example.weatherapp.model.WeatherData;
 import com.example.weatherapp.model.ForecastData;
 import com.example.weatherapp.model.AirQualityData;
-import com.example.weatherapp.model.Location;
 import com.example.weatherapp.repository.WeatherRepository;
 import com.example.weatherapp.external.OpenWeatherMapClient;
 import org.springframework.beans.factory.annotation.Autowired;

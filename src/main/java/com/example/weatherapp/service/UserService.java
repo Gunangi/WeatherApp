@@ -2,7 +2,6 @@
 package com.example.weatherapp.service;
 
 import com.example.weatherapp.model.User;
-import com.example.weatherapp.model.EnhancedWeatherPreferences;
 import com.example.weatherapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

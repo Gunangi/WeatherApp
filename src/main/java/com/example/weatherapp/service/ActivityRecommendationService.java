@@ -2,7 +2,6 @@ package com.example.weatherapp.service;
 
 import com.example.weatherapp.dto.ActivityRecommendationDto;
 import com.example.weatherapp.dto.WeatherDataDto;
-import com.example.weatherapp.model.ActivityRecommendation;
 import com.example.weatherapp.model.UserPreferences;
 import com.example.weatherapp.repository.ActivityRecommendationRepository;
 import com.example.weatherapp.repository.UserPreferencesRepository;

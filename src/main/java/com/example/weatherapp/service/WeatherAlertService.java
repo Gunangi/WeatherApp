@@ -2,9 +2,6 @@
 package com.example.weatherapp.service;
 
 import com.example.weatherapp.model.WeatherAlert;
-import com.example.weatherapp.model.AlertType;
-import com.example.weatherapp.model.AlertCondition;
-import com.example.weatherapp.model.ExtendedWeatherData;
 import com.example.weatherapp.repository.WeatherAlertRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
