@@ -1,7 +1,6 @@
 package com.example.weatherapp.service;
 
 import com.example.weatherapp.model.*;
-import com.example.weatherapp.repository.WeatherJournalRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
