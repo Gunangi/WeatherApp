@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.TimeUnit;
 
 @Component
-public class MongoIndexConfig implements CommandLineRunner {
+public class MongoConfig implements CommandLineRunner {
 
     @Autowired
     private MongoTemplate mongoTemplate;
