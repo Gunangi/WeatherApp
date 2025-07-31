@@ -7,7 +7,6 @@ import com.example.weatherapp.dto.PollenForecastDto;
 import com.example.weatherapp.dto.HealthAlertDto;
 import com.example.weatherapp.dto.HealthPreferencesDto;
 import com.example.weatherapp.dto.ApiResponse;
-import com.example.weatherapp.service.HealthWeatherService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

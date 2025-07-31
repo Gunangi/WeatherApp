@@ -1,7 +1,6 @@
 package com.example.weatherapp.controller;
 
 import com.example.weatherapp.dto.WeatherJournalEntryDto;
-import com.example.weatherapp.service.WeatherJournalService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
