@@ -1,15 +1,23 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.2.5'
+    id 'org.springframework.boot' version '3.2.0'
     id 'io.spring.dependency-management' version '1.1.4'
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.7.0'
 }
 
-group = 'com.example'
-version = '0.0.1-SNAPSHOT'
+group = 'com.weatherapp'
+version = '1.0.0'
 
 java {
-    sourceCompatibility = '17'
-    targetCompatibility = '17'
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
 }
 
 repositories {
@@ -17,38 +25,116 @@ repositories {
 }
 
 dependencies {
-    // Core Spring Boot starter
+    // Spring Boot Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
-
-    // Spring Data MongoDB for database interaction
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
-
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
-    implementation 'com.google.firebase:firebase-admin:9.2.0'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
-    // Spring Boot DevTools for automatic restarts and live reload
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    // Scheduling and Task Management
+    implementation 'org.springframework.boot:spring-boot-starter-quartz'
 
-    // Lombok to reduce boilerplate code
+    // WebClient for HTTP requests
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // JSON Processing
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    // HTTP Client
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
+
+    // Lombok for reducing boilerplate
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
-    // Testing dependencies
+    // JWT Authentication
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+
+    // Push Notifications
+    implementation 'com.google.firebase:firebase-admin:9.2.0'
+
+    // Geolocation and Geocoding
+    implementation 'com.maxmind.geoip2:geoip2:4.1.0'
+
+    // Rate Limiting
+    implementation 'com.github.vladimir-bukhtoyarov:bucket4j-core:7.6.0'
+    implementation 'com.github.vladimir-bukhtoyarov:bucket4j-redis:7.6.0'
+
+    // Swagger/OpenAPI Documentation
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+
+    // Monitoring and Metrics
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
+    // Configuration Properties
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    // MapStruct for DTO mapping
+    implementation 'org.mapstruct:mapstruct:1.5.5.Final'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
+
+    // Apache Commons for utilities
+    implementation 'org.apache.commons:commons-lang3:3.13.0'
+    implementation 'commons-validator:commons-validator:1.7'
+
+    // Caffeine Cache
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+
+    // Testing Dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo:4.11.0'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:mongodb'
+    testImplementation 'org.mockito:mockito-inline'
+    testImplementation 'com.github.tomakehurst:wiremock-jre8:2.35.0'
+
+    // Development Tools
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'org.testcontainers:testcontainers-bom:1.19.3'
+    }
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
 }
 
-// Ensure the main class is correctly specified
+// JAR configuration
+jar {
+    archiveBaseName = 'weather-app'
+    archiveVersion = project.version
+    enabled = false
+}
+
+bootJar {
+    archiveBaseName = 'weather-app'
+    archiveVersion = project.version
+    archiveClassifier = ''
+}
+
+// Build info for actuator
 springBoot {
-    mainClass = 'com.example.weatherapp.WeatherAppApplication'
+    buildInfo()
 }
 
-// Simple task to run the application
-task runApp {
-    dependsOn 'bootRun'
-    description = 'Run the Spring Boot application'
+// Gradle wrapper
+wrapper {
+    gradleVersion = '8.5'
+    distributionType = Wrapper.DistributionType.BIN
 }

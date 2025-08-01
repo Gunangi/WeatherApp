@@ -4,7 +4,7 @@ import './App.css';
 
 // Utility functions
 const weatherAPI = {
-    API_KEY: 'your-api-key-here', // Replace with actual API key
+    API_KEY: '38b64d931ea106a38a71f9ec1643ba9d', // Replace with actual API key
     BASE_URL: 'https://api.openweathermap.org/data/2.5',
 
     async getCurrentWeather(lat, lon) {
@@ -311,26 +311,30 @@ const App = () => {
                     <div className="weather-content">
                         <WeatherDisplay weather={weather} isDark={isDark} />
 
-                        {forecast && (
+                        {forecast && forecast.list && (
                             <div className="forecast-section">
                                 <h3>5-Day Forecast</h3>
                                 <div className="forecast-cards">
-                                    {forecast.list.filter((_, index) => index % 8 === 0).slice(0, 5).map((item, index) => (
-                                        <div key={index} className="forecast-card">
-                                            <div className="forecast-day">
-                                                {index === 0 ? 'Today' : dateUtils.formatDate(item.dt)}
+                                    {forecast.list
+                                        .filter((_, index) => index % 8 === 0)
+                                        .slice(0, 5)
+                                        .map((item, index) => (
+                                            <div key={index} className="forecast-card">
+                                                <div className="forecast-day">
+                                                    {index === 0 ? 'Today' : dateUtils.formatDate(item.dt)}
+                                                </div>
+                                                <div className="forecast-icon">
+                                                    {item.weather[0].main === 'Rain' ? '🌧️' :
+                                                        item.weather[0].main === 'Clouds' ? '☁️' :
+                                                            item.weather[0].main === 'Clear' ? '☀️' : '🌤️'}
+                                                </div>
+                                                <div className="forecast-temps">
+                                                    <span className="high">{Math.round(item.main.temp_max)}°</span>
+                                                    <span className="low">{Math.round(item.main.temp_min)}°</span>
+                                                </div>
                                             </div>
-                                            <div className="forecast-icon">
-                                                {item.weather[0].main === 'Rain' ? '🌧️' :
-                                                    item.weather[0].main === 'Clouds' ? '☁️' :
-                                                        item.weather[0].main === 'Clear' ? '☀️' : '🌤️'}
-                                            </div>
-                                            <div className="forecast-temps">
-                                                <span className="high">{Math.round(item.main.temp_max)}°</span>
-                                                <span className="low">{Math.round(item.main.temp_min)}°</span>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        ))
+                                    }
                                 </div>
                             </div>
                         )}
