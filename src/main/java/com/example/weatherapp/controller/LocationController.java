@@ -1,140 +1,181 @@
-// src/main/java/com/example/weatherapp/controller/LocationController.java
 package com.example.weatherapp.controller;
 
+import com.example.weatherapp.dto.LocationDto;
 import com.example.weatherapp.model.LocationHistory;
 import com.example.weatherapp.service.LocationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
-import java.util.Map;
 
 @RestController
-@RequestMapping("/api/locations")
-@CrossOrigin(origins = "http://localhost:3000")
+@RequestMapping("/api/location")
+@CrossOrigin(origins = "*")
 public class LocationController {
 
     @Autowired
     private LocationService locationService;
 
+    /**
+     * Search for locations by name
+     */
     @GetMapping("/search")
-    public ResponseEntity<List<LocationSearchResult>> searchLocations(
+    public ResponseEntity<List<LocationDto>> searchLocations(
             @RequestParam String query,
-            @RequestParam(defaultValue = "10") int limit) {
+            @RequestParam(defaultValue = "5") int limit) {
         try {
-            List<LocationSearchResult> results = locationService.searchLocations(query, limit);
-            return ResponseEntity.ok(results);
+            List<LocationDto> locations = locationService.searchLocations(query, limit);
+            return ResponseEntity.ok(locations);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    @GetMapping("/reverse")
-    public ResponseEntity<LocationSearchResult> reverseGeocode(
+    /**
+     * Get coordinates from city name (geocoding)
+     */
+    @GetMapping("/geocode")
+    public ResponseEntity<LocationDto> getCoordinates(@RequestParam String city) {
+        try {
+            LocationDto location = locationService.getCoordinatesByCity(city);
+            return ResponseEntity.ok(location);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    /**
+     * Get city name from coordinates (reverse geocoding)
+     */
+    @GetMapping("/reverse-geocode")
+    public ResponseEntity<LocationDto> getCityFromCoordinates(
             @RequestParam double lat,
             @RequestParam double lon) {
         try {
-            LocationSearchResult result = locationService.reverseGeocode(lat, lon);
-            return ResponseEntity.ok(result);
+            LocationDto location = locationService.getCityFromCoordinates(lat, lon);
+            return ResponseEntity.ok(location);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 
-    @GetMapping("/favorites/{userId}")
-    public ResponseEntity<List<FavoriteLocation>> getFavoriteLocations(@PathVariable String userId) {
-        List<FavoriteLocation> favorites = locationService.getFavoriteLocations(userId);
-        return ResponseEntity.ok(favorites);
-    }
-
-    @PostMapping("/favorites/{userId}")
-    public ResponseEntity<FavoriteLocation> addToFavorites(
-            @PathVariable String userId,
-            @RequestBody @Valid LocationSearchResult location,
-            @RequestParam(required = false) String nickname) {
-        try {
-            FavoriteLocation favorite = locationService.addToFavorites(userId, location, nickname);
-            return ResponseEntity.ok(favorite);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    @DeleteMapping("/favorites/{userId}/{favoriteId}")
-    public ResponseEntity<String> removeFromFavorites(
-            @PathVariable String userId,
-            @PathVariable String favoriteId) {
-        try {
-            locationService.removeFromFavorites(userId, favoriteId);
-            return ResponseEntity.ok("{\"message\":\"Location removed from favorites\"}");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("{\"error\":\"Failed to remove from favorites\"}");
-        }
-    }
-
-    @PutMapping("/favorites/{userId}/{favoriteId}/default")
-    public ResponseEntity<String> setDefaultLocation(
-            @PathVariable String userId,
-            @PathVariable String favoriteId) {
-        try {
-            locationService.setDefaultLocation(userId, favoriteId);
-            return ResponseEntity.ok("{\"message\":\"Default location updated\"}");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("{\"error\":\"Failed to set default location\"}");
-        }
-    }
-
+    /**
+     * Get user's location history
+     */
     @GetMapping("/history/{userId}")
     public ResponseEntity<List<LocationHistory>> getLocationHistory(@PathVariable String userId) {
-        List<LocationHistory> history = locationService.getLocationHistory(userId);
-        return ResponseEntity.ok(history);
+        try {
+            List<LocationHistory> history = locationService.getLocationHistory(userId);
+            return ResponseEntity.ok(history);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
+    /**
+     * Add location to user's history
+     */
     @PostMapping("/history/{userId}")
-    public ResponseEntity<String> saveToHistory(
+    public ResponseEntity<LocationHistory> addToHistory(
             @PathVariable String userId,
-            @RequestBody LocationSearchResult location,
-            @RequestParam(defaultValue = "false") boolean isGpsDetected) {
+            @Valid @RequestBody LocationDto locationDto) {
         try {
-            locationService.saveLocationToHistory(userId, location, isGpsDetected);
-            return ResponseEntity.ok("{\"message\":\"Location saved to history\"}");
+            LocationHistory savedLocation = locationService.addToHistory(userId, locationDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedLocation);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("{\"error\":\"Failed to save to history\"}");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    @DeleteMapping("/history/{userId}")
-    public ResponseEntity<String> clearLocationHistory(@PathVariable String userId) {
+    /**
+     * Remove location from user's history
+     */
+    @DeleteMapping("/history/{userId}/{locationId}")
+    public ResponseEntity<Void> removeFromHistory(
+            @PathVariable String userId,
+            @PathVariable String locationId) {
         try {
-            locationService.clearLocationHistory(userId);
-            return ResponseEntity.ok("{\"message\":\"Location history cleared\"}");
+            locationService.removeFromHistory(userId, locationId);
+            return ResponseEntity.noContent().build();
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("{\"error\":\"Failed to clear history\"}");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
+    /**
+     * Get user's favorite locations
+     */
+    @GetMapping("/favorites/{userId}")
+    public ResponseEntity<List<LocationHistory>> getFavoriteLocations(@PathVariable String userId) {
+        try {
+            List<LocationHistory> favorites = locationService.getFavoriteLocations(userId);
+            return ResponseEntity.ok(favorites);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Add location to favorites
+     */
+    @PostMapping("/favorites/{userId}")
+    public ResponseEntity<LocationHistory> addToFavorites(
+            @PathVariable String userId,
+            @Valid @RequestBody LocationDto locationDto) {
+        try {
+            LocationHistory favoriteLocation = locationService.addToFavorites(userId, locationDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(favoriteLocation);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Remove location from favorites
+     */
+    @DeleteMapping("/favorites/{userId}/{locationId}")
+    public ResponseEntity<Void> removeFromFavorites(
+            @PathVariable String userId,
+            @PathVariable String locationId) {
+        try {
+            locationService.removeFromFavorites(userId, locationId);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get nearby locations based on coordinates
+     */
     @GetMapping("/nearby")
-    public ResponseEntity<List<LocationSearchResult>> getNearbyLocations(
+    public ResponseEntity<List<LocationDto>> getNearbyLocations(
             @RequestParam double lat,
             @RequestParam double lon,
-            @RequestParam(defaultValue = "50") int radiusKm) {
+            @RequestParam(defaultValue = "10") int radius) {
         try {
-            List<LocationSearchResult> nearbyLocations = locationService.getNearbyLocations(lat, lon, radiusKm);
+            List<LocationDto> nearbyLocations = locationService.getNearbyLocations(lat, lon, radius);
             return ResponseEntity.ok(nearbyLocations);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
+    /**
+     * Validate location coordinates
+     */
     @GetMapping("/validate")
-    public ResponseEntity<Map<String, Boolean>> validateLocation(@RequestParam String location) {
+    public ResponseEntity<Boolean> validateLocation(
+            @RequestParam double lat,
+            @RequestParam double lon) {
         try {
-            boolean isValid = locationService.validateLocation(location);
-            return ResponseEntity.ok(Map.of("valid", isValid));
+            boolean isValid = locationService.validateCoordinates(lat, lon);
+            return ResponseEntity.ok(isValid);
         } catch (Exception e) {
-            return ResponseEntity.ok(Map.of("valid", false));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }
