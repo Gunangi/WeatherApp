@@ -1,169 +1,361 @@
 package com.example.weatherapp.service;
 
+import com.example.weatherapp.dto.WeatherResponse;
 import com.example.weatherapp.model.WeatherData;
-import com.example.weatherapp.model.ForecastData;
-import com.example.weatherapp.model.AirQualityData;
-import com.example.weatherapp.repository.WeatherRepository;
-import com.example.weatherapp.external.OpenWeatherMapClient;
+import com.example.weatherapp.model.User;
+import com.example.weatherapp.repository.WeatherDataRepository;
+import com.example.weatherapp.repository.UserRepository;
+import com.example.weatherapp.exception.WeatherServiceException;
+import com.example.weatherapp.exception.LocationNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.cache.annotation.Cacheable;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
-@Slf4j
 public class WeatherService {
 
-    @Autowired
-    private WeatherRepository weatherRepository;
+    private static final Logger logger = LoggerFactory.getLogger(WeatherService.class);
+
+    @Value("${weather.api.key}")
+    private String apiKey;
+
+    @Value("${weather.api.base-url:https://api.openweathermap.org/data/2.5}")
+    private String baseUrl;
 
     @Autowired
-    private OpenWeatherMapClient weatherClient;
+    private WeatherDataRepository weatherDataRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Autowired
+    private LocationService locationService;
 
     @Autowired
     private NotificationService notificationService;
 
-    @Cacheable(value = "currentWeather", key = "#location.city + '_' + #location.country")
-    public WeatherData getCurrentWeather(Location location) {
+    /**
+     * Get current weather by city name
+     */
+    public WeatherResponse getCurrentWeatherByCity(String cityName, String userId) {
         try {
-            log.info("Fetching current weather for: {}, {}", location.getCity(), location.getCountry());
+            String url = String.format("%s/weather?q=%s&appid=%s&units=metric",
+                    baseUrl, cityName, apiKey);
 
-            WeatherData weatherData = weatherClient.getCurrentWeather(location);
-            weatherData.setTimestamp(LocalDateTime.now());
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
 
-            // Save to database for historical tracking
-            weatherRepository.save(weatherData);
+            if (response == null) {
+                throw new WeatherServiceException("No weather data received from API");
+            }
 
-            // Check for severe weather alerts
-            checkWeatherAlerts(weatherData, location);
+            WeatherData weatherData = parseWeatherResponse(response);
+            weatherData.setUserId(userId);
+            weatherData.setRequestTime(LocalDateTime.now());
 
-            return weatherData;
+            // Save to database
+            weatherDataRepository.save(weatherData);
+
+            // Update location history
+            locationService.addToLocationHistory(userId, cityName,
+                    weatherData.getLatitude(), weatherData.getLongitude());
+
+            // Check for weather alerts
+            checkWeatherAlerts(weatherData, userId);
+
+            return convertToWeatherResponse(weatherData);
+
+        } catch (RestClientException e) {
+            logger.error("Error fetching weather data for city: {}", cityName, e);
+            throw new WeatherServiceException("Failed to fetch weather data: " + e.getMessage());
         } catch (Exception e) {
-            log.error("Error fetching current weather for {}: {}", location.getCity(), e.getMessage());
-            // Return cached data if available
-            return getCachedWeatherData(location);
+            logger.error("Unexpected error in getCurrentWeatherByCity", e);
+            throw new WeatherServiceException("Unexpected error occurred");
         }
     }
 
-    @Cacheable(value = "forecast", key = "#location.city + '_' + #days")
-    public List<ForecastData> getForecast(Location location, int days) {
+    /**
+     * Get current weather by coordinates
+     */
+    public WeatherResponse getCurrentWeatherByCoordinates(double lat, double lon, String userId) {
         try {
-            log.info("Fetching {}-day forecast for: {}, {}", days, location.getCity(), location.getCountry());
+            String url = String.format("%s/weather?lat=%f&lon=%f&appid=%s&units=metric",
+                    baseUrl, lat, lon, apiKey);
 
-            List<ForecastData> forecast = weatherClient.getForecast(location, days);
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
 
-            // Save forecast data
-            forecast.forEach(f -> {
-                f.setLocation(location);
-                weatherRepository.saveForecast(f);
-            });
+            if (response == null) {
+                throw new WeatherServiceException("No weather data received from API");
+            }
 
-            return forecast;
-        } catch (Exception e) {
-            log.error("Error fetching forecast for {}: {}", location.getCity(), e.getMessage());
-            return getCachedForecastData(location, days);
+            WeatherData weatherData = parseWeatherResponse(response);
+            weatherData.setUserId(userId);
+            weatherData.setRequestTime(LocalDateTime.now());
+
+            // Save to database
+            weatherDataRepository.save(weatherData);
+
+            // Check for weather alerts
+            checkWeatherAlerts(weatherData, userId);
+
+            return convertToWeatherResponse(weatherData);
+
+        } catch (RestClientException e) {
+            logger.error("Error fetching weather data for coordinates: {}, {}", lat, lon, e);
+            throw new WeatherServiceException("Failed to fetch weather data: " + e.getMessage());
         }
     }
 
-    @Cacheable(value = "hourlyForecast", key = "#location.city + '_24h'")
-    public List<ForecastData> getHourlyForecast(Location location) {
+    /**
+     * Get weather data with user preferences applied
+     */
+    public WeatherResponse getWeatherWithPreferences(String cityName, String userId) {
+        WeatherResponse weather = getCurrentWeatherByCity(cityName, userId);
+
+        // Apply user preferences for units
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if ("fahrenheit".equalsIgnoreCase(user.getTemperatureUnit())) {
+                weather = convertToFahrenheit(weather);
+            }
+            if ("mph".equalsIgnoreCase(user.getWindSpeedUnit())) {
+                weather = convertWindSpeedToMph(weather);
+            }
+        }
+
+        return weather;
+    }
+
+    /**
+     * Parse weather API response to WeatherData model
+     */
+    private WeatherData parseWeatherResponse(Map<String, Object> response) {
+        WeatherData weatherData = new WeatherData();
+
         try {
-            log.info("Fetching hourly forecast for: {}, {}", location.getCity(), location.getCountry());
-            return weatherClient.getHourlyForecast(location, 24);
+            // Basic info
+            weatherData.setCityName((String) response.get("name"));
+
+            // Coordinates
+            Map<String, Object> coord = (Map<String, Object>) response.get("coord");
+            weatherData.setLatitude(((Number) coord.get("lat")).doubleValue());
+            weatherData.setLongitude(((Number) coord.get("lon")).doubleValue());
+
+            // Main weather data
+            Map<String, Object> main = (Map<String, Object>) response.get("main");
+            weatherData.setTemperature(((Number) main.get("temp")).doubleValue());
+            weatherData.setFeelsLike(((Number) main.get("feels_like")).doubleValue());
+            weatherData.setHumidity(((Number) main.get("humidity")).intValue());
+            weatherData.setPressure(((Number) main.get("pressure")).intValue());
+
+            if (main.get("temp_min") != null) {
+                weatherData.setTempMin(((Number) main.get("temp_min")).doubleValue());
+            }
+            if (main.get("temp_max") != null) {
+                weatherData.setTempMax(((Number) main.get("temp_max")).doubleValue());
+            }
+
+            // Weather description
+            Map<String, Object>[] weather = (Map<String, Object>[]) response.get("weather");
+            if (weather != null && weather.length > 0) {
+                weatherData.setDescription((String) weather[0].get("description"));
+                weatherData.setMainCondition((String) weather[0].get("main"));
+                weatherData.setWeatherIcon((String) weather[0].get("icon"));
+            }
+
+            // Wind data
+            Map<String, Object> wind = (Map<String, Object>) response.get("wind");
+            if (wind != null) {
+                weatherData.setWindSpeed(((Number) wind.get("speed")).doubleValue());
+                if (wind.get("deg") != null) {
+                    weatherData.setWindDirection(((Number) wind.get("deg")).intValue());
+                }
+            }
+
+            // Visibility
+            if (response.get("visibility") != null) {
+                weatherData.setVisibility(((Number) response.get("visibility")).doubleValue() / 1000); // Convert to km
+            }
+
+            // Sunrise/Sunset
+            Map<String, Object> sys = (Map<String, Object>) response.get("sys");
+            if (sys != null) {
+                if (sys.get("sunrise") != null) {
+                    long sunrise = ((Number) sys.get("sunrise")).longValue();
+                    weatherData.setSunrise(LocalDateTime.ofEpochSecond(sunrise, 0, ZoneId.systemDefault().getRules().getOffset(LocalDateTime.now())));
+                }
+                if (sys.get("sunset") != null) {
+                    long sunset = ((Number) sys.get("sunset")).longValue();
+                    weatherData.setSunset(LocalDateTime.ofEpochSecond(sunset, 0, ZoneId.systemDefault().getRules().getOffset(LocalDateTime.now())));
+                }
+                weatherData.setCountry((String) sys.get("country"));
+            }
+
+            // Timezone
+            if (response.get("timezone") != null) {
+                weatherData.setTimezone(((Number) response.get("timezone")).intValue());
+            }
+
+            weatherData.setLastUpdated(LocalDateTime.now());
+
         } catch (Exception e) {
-            log.error("Error fetching hourly forecast for {}: {}", location.getCity(), e.getMessage());
-            return getCachedHourlyForecast(location);
+            logger.error("Error parsing weather response", e);
+            throw new WeatherServiceException("Failed to parse weather data");
         }
+
+        return weatherData;
     }
 
-    @Cacheable(value = "airQuality", key = "#location.city")
-    public AirQualityData getAirQuality(Location location) {
+    /**
+     * Convert WeatherData to WeatherResponse DTO
+     */
+    private WeatherResponse convertToWeatherResponse(WeatherData weatherData) {
+        WeatherResponse response = new WeatherResponse();
+
+        response.setCityName(weatherData.getCityName());
+        response.setCountry(weatherData.getCountry());
+        response.setLatitude(weatherData.getLatitude());
+        response.setLongitude(weatherData.getLongitude());
+        response.setTemperature(weatherData.getTemperature());
+        response.setFeelsLike(weatherData.getFeelsLike());
+        response.setTempMin(weatherData.getTempMin());
+        response.setTempMax(weatherData.getTempMax());
+        response.setHumidity(weatherData.getHumidity());
+        response.setPressure(weatherData.getPressure());
+        response.setDescription(weatherData.getDescription());
+        response.setMainCondition(weatherData.getMainCondition());
+        response.setWeatherIcon(weatherData.getWeatherIcon());
+        response.setWindSpeed(weatherData.getWindSpeed());
+        response.setWindDirection(weatherData.getWindDirection());
+        response.setVisibility(weatherData.getVisibility());
+        response.setTimezone(weatherData.getTimezone());
+
+        // Format sunrise/sunset times
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+        if (weatherData.getSunrise() != null) {
+            response.setSunrise(weatherData.getSunrise().format(timeFormatter));
+        }
+        if (weatherData.getSunset() != null) {
+            response.setSunset(weatherData.getSunset().format(timeFormatter));
+        }
+
+        response.setLastUpdated(weatherData.getLastUpdated());
+
+        return response;
+    }
+
+    /**
+     * Convert temperature values to Fahrenheit
+     */
+    private WeatherResponse convertToFahrenheit(WeatherResponse weather) {
+        weather.setTemperature(celsiusToFahrenheit(weather.getTemperature()));
+        weather.setFeelsLike(celsiusToFahrenheit(weather.getFeelsLike()));
+        if (weather.getTempMin() != null) {
+            weather.setTempMin(celsiusToFahrenheit(weather.getTempMin()));
+        }
+        if (weather.getTempMax() != null) {
+            weather.setTempMax(celsiusToFahrenheit(weather.getTempMax()));
+        }
+        weather.setTemperatureUnit("°F");
+        return weather;
+    }
+
+    /**
+     * Convert wind speed to mph
+     */
+    private WeatherResponse convertWindSpeedToMph(WeatherResponse weather) {
+        weather.setWindSpeed(weather.getWindSpeed() * 2.237); // m/s to mph
+        weather.setWindSpeedUnit("mph");
+        return weather;
+    }
+
+    /**
+     * Convert Celsius to Fahrenheit
+     */
+    private double celsiusToFahrenheit(double celsius) {
+        return (celsius * 9.0 / 5.0) + 32.0;
+    }
+
+    /**
+     * Check for weather alerts and send notifications
+     */
+    private void checkWeatherAlerts(WeatherData weatherData, String userId) {
         try {
-            log.info("Fetching air quality for: {}, {}", location.getCity(), location.getCountry());
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
 
-            AirQualityData airQuality = weatherClient.getAirQuality(location);
-            airQuality.setTimestamp(LocalDateTime.now());
+                // Check temperature thresholds
+                if (user.getHighTempAlert() != null && weatherData.getTemperature() > user.getHighTempAlert()) {
+                    notificationService.sendTemperatureAlert(userId, weatherData.getCityName(),
+                            weatherData.getTemperature(), "high");
+                }
 
-            // Save air quality data
-            weatherRepository.saveAirQuality(airQuality);
+                if (user.getLowTempAlert() != null && weatherData.getTemperature() < user.getLowTempAlert()) {
+                    notificationService.sendTemperatureAlert(userId, weatherData.getCityName(),
+                            weatherData.getTemperature(), "low");
+                }
 
-            return airQuality;
+                // Check for severe weather conditions
+                String mainCondition = weatherData.getMainCondition().toLowerCase();
+                if (mainCondition.contains("thunderstorm") || mainCondition.contains("tornado") ||
+                        mainCondition.contains("hurricane")) {
+                    notificationService.sendSevereWeatherAlert(userId, weatherData.getCityName(),
+                            weatherData.getDescription());
+                }
+            }
         } catch (Exception e) {
-            log.error("Error fetching air quality for {}: {}", location.getCity(), e.getMessage());
-            return getCachedAirQualityData(location);
+            logger.error("Error checking weather alerts for user: {}", userId, e);
         }
     }
 
-    public List<WeatherData> getHistoricalWeather(Location location, LocalDateTime startDate, LocalDateTime endDate) {
-        log.info("Fetching historical weather for: {} from {} to {}", location.getCity(), startDate, endDate);
-        return weatherRepository.findByLocationAndDateRange(location, startDate, endDate);
-    }
+    /**
+     * Get cached weather data if available and recent
+     */
+    public Optional<WeatherResponse> getCachedWeather(String cityName, String userId) {
+        Optional<WeatherData> cachedData = weatherDataRepository
+                .findTopByCityNameAndUserIdOrderByLastUpdatedDesc(cityName, userId);
 
-    public WeatherData getWeatherByCoordinates(double latitude, double longitude) {
-        Location location = Location.builder()
-                .latitude(latitude)
-                .longitude(longitude)
-                .build();
-
-        return getCurrentWeather(location);
-    }
-
-    public List<Location> searchCities(String query) {
-        try {
-            log.info("Searching cities with query: {}", query);
-            return weatherClient.searchCities(query);
-        } catch (Exception e) {
-            log.error("Error searching cities: {}", e.getMessage());
-            return List.of();
-        }
-    }
-
-    private void checkWeatherAlerts(WeatherData weatherData, Location location) {
-        // Check for severe weather conditions
-        if (weatherData.getTemperature() > 40 || weatherData.getTemperature() < -10) {
-            notificationService.sendWeatherAlert(location, "Extreme Temperature Alert",
-                    String.format("Temperature is %s°C", weatherData.getTemperature()));
+        if (cachedData.isPresent()) {
+            WeatherData data = cachedData.get();
+            // Return cached data if it's less than 10 minutes old
+            if (data.getLastUpdated().isAfter(LocalDateTime.now().minusMinutes(10))) {
+                return Optional.of(convertToWeatherResponse(data));
+            }
         }
 
-        if (weatherData.getWindSpeed() > 15) {
-            notificationService.sendWeatherAlert(location, "High Wind Alert",
-                    String.format("Wind speed is %s m/s", weatherData.getWindSpeed()));
+        return Optional.empty();
+    }
+
+    /**
+     * Get weather summary for multiple cities
+     */
+    public Map<String, WeatherResponse> getMultipleCitiesWeather(String[] cities, String userId) {
+        Map<String, WeatherResponse> weatherMap = new java.util.HashMap<>();
+
+        for (String city : cities) {
+            try {
+                WeatherResponse weather = getCurrentWeatherByCity(city, userId);
+                weatherMap.put(city, weather);
+            } catch (Exception e) {
+                logger.error("Failed to get weather for city: {}", city, e);
+                // Continue with other cities
+            }
         }
 
-        if (weatherData.getCondition().toLowerCase().contains("storm") ||
-                weatherData.getCondition().toLowerCase().contains("thunder")) {
-            notificationService.sendWeatherAlert(location, "Storm Alert",
-                    "Thunderstorm conditions detected");
-        }
-    }
-
-    private WeatherData getCachedWeatherData(Location location) {
-        Optional<WeatherData> cached = weatherRepository.findLatestByLocation(location);
-        return cached.orElse(null);
-    }
-
-    private List<ForecastData> getCachedForecastData(Location location, int days) {
-        return weatherRepository.findForecastByLocation(location, days);
-    }
-
-    private List<ForecastData> getCachedHourlyForecast(Location location) {
-        return weatherRepository.findHourlyForecastByLocation(location);
-    }
-
-    private AirQualityData getCachedAirQualityData(Location location) {
-        Optional<AirQualityData> cached = weatherRepository.findLatestAirQualityByLocation(location);
-        return cached.orElse(null);
-    }
-
-    public void refreshWeatherData(Location location) {
-        log.info("Refreshing weather data for: {}", location.getCity());
-        // Clear cache and fetch fresh data
-        getCurrentWeather(location);
-        getForecast(location, 5);
-        getAirQuality(location);
+        return weatherMap;
     }
 }

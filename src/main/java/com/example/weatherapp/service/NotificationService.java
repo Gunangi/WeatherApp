@@ -1,384 +1,448 @@
 package com.example.weatherapp.service;
 
-import com.example.weatherapp.model.*;
-import com.example.weatherapp.repository.NotificationRepository;
-import com.example.weatherapp.config.FirebaseConfig;
+import com.example.weatherapp.model.WeatherAlert;
+import com.example.weatherapp.model.User;
+import com.example.weatherapp.model.WeatherData;
+import com.example.weatherapp.repository.WeatherAlertRepository;
+import com.example.weatherapp.repository.UserRepository;
+import com.example.weatherapp.exception.InvalidRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.MailSender;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Service
-@Slf4j
 public class NotificationService {
 
-    @Autowired
-    private NotificationRepository notificationRepository;
+    private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
 
     @Autowired
-    private FirebaseConfig firebaseConfig;
+    private WeatherAlertRepository weatherAlertRepository;
 
-    @Async
-    public CompletableFuture<Void> sendWeatherAlert(Location location, String title, String message) {
-        try {
-            log.info("Sending weather alert for {}: {}", location.getCity(), title);
+    @Autowired
+    private UserRepository userRepository;
 
-            WeatherNotification notification = WeatherNotification.builder()
-                    .location(location)
-                    .title(title)
-                    .message(message)
-                    .type(NotificationType.WEATHER_ALERT)
-                    .priority(NotificationPriority.HIGH)
-                    .timestamp(LocalDateTime.now())
-                    .isRead(false)
-                    .build();
+    @Autowired
+    private MailSender mailSender;
 
-            // Save notification to database
-            notificationRepository.save(notification);
+    @Autowired
+    private ObjectMapper objectMapper;
 
-            // Send push notification
-            sendPushNotification(notification);
+    // Severe weather condition codes that trigger alerts
+    private static final Map<String, String> SEVERE_WEATHER_CONDITIONS = Map.of(
+            "thunderstorm", "Thunderstorm Alert",
+            "tornado", "Tornado Warning",
+            "hurricane", "Hurricane Warning",
+            "blizzard", "Blizzard Warning",
+            "ice storm", "Ice Storm Warning",
+            "severe wind", "Severe Wind Warning",
+            "hail", "Hail Warning",
+            "flood", "Flood Warning"
+    );
 
-            // Send email notification if configured
-            sendEmailNotification(notification);
+    /**
+     * Create and save a weather alert
+     */
+    public WeatherAlert createWeatherAlert(String userId, String alertType, String title,
+                                           String message, String severity, Map<String, Object> metadata) {
 
-            log.info("Weather alert sent successfully for: {}", location.getCity());
+        WeatherAlert alert = new WeatherAlert();
+        alert.setUserId(userId);
+        alert.setAlertType(alertType);
+        alert.setTitle(title);
+        alert.setMessage(message);
+        alert.setSeverity(severity);
+        alert.setMetadata(metadata);
+        alert.setCreatedAt(LocalDateTime.now());
+        alert.setIsRead(false);
+        alert.setIsActive(true);
 
-        } catch (Exception e) {
-            log.error("Error sending weather alert: {}", e.getMessage());
-        }
+        WeatherAlert savedAlert = weatherAlertRepository.save(alert);
 
-        return CompletableFuture.completedFuture(null);
+        // Send notification asynchronously
+        sendNotificationAsync(userId, savedAlert);
+
+        return savedAlert;
     }
 
-    @Async
-    public CompletableFuture<Void> sendHealthAlert(Location location, String title, String message) {
-        try {
-            log.info("Sending health alert for {}: {}", location.getCity(), title);
-
-            WeatherNotification notification = WeatherNotification.builder()
-                    .location(location)
-                    .title(title)
-                    .message(message)
-                    .type(NotificationType.HEALTH_ALERT)
-                    .priority(NotificationPriority.MEDIUM)
-                    .timestamp(LocalDateTime.now())
-                    .isRead(false)
-                    .build();
-
-            notificationRepository.save(notification);
-            sendPushNotification(notification);
-
-            log.info("Health alert sent successfully for: {}", location.getCity());
-
-        } catch (Exception e) {
-            log.error("Error sending health alert: {}", e.getMessage());
+    /**
+     * Process weather data and check for alert conditions
+     */
+    public void processWeatherForAlerts(String userId, WeatherData weatherData) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null || user.getPreferences() == null || !user.getPreferences().isNotificationsEnabled()) {
+            return;
         }
 
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Async
-    public CompletableFuture<Void> sendDailyWeatherSummary(String userId, Location location, WeatherData weather) {
-        try {
-            log.info("Sending daily weather summary for user: {} at {}", userId, location.getCity());
-
-            String message = buildDailyWeatherMessage(weather);
-
-            WeatherNotification notification = WeatherNotification.builder()
-                    .userId(userId)
-                    .location(location)
-                    .title("Daily Weather Summary")
-                    .message(message)
-                    .type(NotificationType.DAILY_SUMMARY)
-                    .priority(NotificationPriority.LOW)
-                    .timestamp(LocalDateTime.now())
-                    .isRead(false)
-                    .build();
-
-            notificationRepository.save(notification);
-            sendPushNotification(notification);
-
-        } catch (Exception e) {
-            log.error("Error sending daily weather summary: {}", e.getMessage());
+        // Check for severe weather alerts
+        if (user.getPreferences().isSevereWeatherAlerts()) {
+            checkSevereWeatherConditions(userId, weatherData);
         }
 
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Async
-    public CompletableFuture<Void> sendCustomReminder(String userId, Location location, String reminderType, String message) {
-        try {
-            log.info("Sending custom reminder for user: {} - Type: {}", userId, reminderType);
-
-            WeatherNotification notification = WeatherNotification.builder()
-                    .userId(userId)
-                    .location(location)
-                    .title(getCustomReminderTitle(reminderType))
-                    .message(message)
-                    .type(NotificationType.CUSTOM_REMINDER)
-                    .priority(NotificationPriority.MEDIUM)
-                    .timestamp(LocalDateTime.now())
-                    .isRead(false)
-                    .build();
-
-            notificationRepository.save(notification);
-            sendPushNotification(notification);
-
-        } catch (Exception e) {
-            log.error("Error sending custom reminder: {}", e.getMessage());
+        // Check for rain alerts
+        if (user.getPreferences().isRainAlerts()) {
+            checkRainConditions(userId, weatherData);
         }
 
-        return CompletableFuture.completedFuture(null);
-    }
-
-    public List<WeatherNotification> getUserNotifications(String userId, int limit) {
-        try {
-            log.info("Fetching notifications for user: {}", userId);
-            return notificationRepository.findByUserIdOrderByTimestampDesc(userId, limit);
-        } catch (Exception e) {
-            log.error("Error fetching user notifications: {}", e.getMessage());
-            return List.of();
+        // Check for temperature threshold alerts
+        if (user.getPreferences().isTemperatureThresholdAlerts()) {
+            checkTemperatureThresholds(userId, weatherData, user);
         }
+
+        // Check for air quality alerts
+        checkAirQualityConditions(userId, weatherData);
     }
 
-    public List<WeatherNotification> getUnreadNotifications(String userId) {
-        try {
-            return notificationRepository.findByUserIdAndIsReadFalse(userId);
-        } catch (Exception e) {
-            log.error("Error fetching unread notifications: {}", e.getMessage());
-            return List.of();
-        }
-    }
+    /**
+     * Check for severe weather conditions
+     */
+    private void checkSevereWeatherConditions(String userId, WeatherData weatherData) {
+        String condition = weatherData.getCondition().toLowerCase();
+        String description = weatherData.getDescription().toLowerCase();
 
-    public void markNotificationAsRead(String notificationId) {
-        try {
-            notificationRepository.markAsRead(notificationId);
-            log.info("Notification marked as read: {}", notificationId);
-        } catch (Exception e) {
-            log.error("Error marking notification as read: {}", e.getMessage());
-        }
-    }
+        for (Map.Entry<String, String> severeCond : SEVERE_WEATHER_CONDITIONS.entrySet()) {
+            if (condition.contains(severeCond.getKey()) || description.contains(severeCond.getKey())) {
+                Map<String, Object> metadata = new HashMap<>();
+                metadata.put("location", weatherData.getCityName());
+                metadata.put("temperature", weatherData.getTemperature());
+                metadata.put("condition", weatherData.getCondition());
+                metadata.put("windSpeed", weatherData.getWindSpeed());
 
-    public void markAllNotificationsAsRead(String userId) {
-        try {
-            notificationRepository.markAllAsReadForUser(userId);
-            log.info("All notifications marked as read for user: {}", userId);
-        } catch (Exception e) {
-            log.error("Error marking all notifications as read: {}", e.getMessage());
-        }
-    }
-
-    public NotificationSettings getUserNotificationSettings(String userId) {
-        try {
-            return notificationRepository.findNotificationSettingsByUserId(userId);
-        } catch (Exception e) {
-            log.error("Error fetching notification settings: {}", e.getMessage());
-            return getDefaultNotificationSettings();
-        }
-    }
-
-    public void updateNotificationSettings(String userId, NotificationSettings settings) {
-        try {
-            settings.setUserId(userId);
-            settings.setUpdatedAt(LocalDateTime.now());
-            notificationRepository.saveNotificationSettings(settings);
-            log.info("Notification settings updated for user: {}", userId);
-        } catch (Exception e) {
-            log.error("Error updating notification settings: {}", e.getMessage());
-        }
-    }
-
-    public void deleteNotification(String notificationId) {
-        try {
-            notificationRepository.deleteById(notificationId);
-            log.info("Notification deleted: {}", notificationId);
-        } catch (Exception e) {
-            log.error("Error deleting notification: {}", e.getMessage());
-        }
-    }
-
-    public void clearOldNotifications(int daysToKeep) {
-        try {
-            LocalDateTime cutoffDate = LocalDateTime.now().minusDays(daysToKeep);
-            int deletedCount = notificationRepository.deleteOlderThan(cutoffDate);
-            log.info("Cleared {} old notifications older than {} days", deletedCount, daysToKeep);
-        } catch (Exception e) {
-            log.error("Error clearing old notifications: {}", e.getMessage());
-        }
-    }
-
-    private void sendPushNotification(WeatherNotification notification) {
-        try {
-            if (shouldSendPushNotification(notification)) {
-                Map<String, String> data = new HashMap<>();
-                data.put("title", notification.getTitle());
-                data.put("message", notification.getMessage());
-                data.put("type", notification.getType().toString());
-                data.put("location", notification.getLocation().getCity());
-                data.put("timestamp", notification.getTimestamp().toString());
-
-                // Use Firebase Cloud Messaging to send push notification
-                firebaseConfig.sendPushNotification(notification.getUserId(), data);
-
-                log.info("Push notification sent for: {}", notification.getTitle());
+                createWeatherAlert(
+                        userId,
+                        "SEVERE_WEATHER",
+                        severeCond.getValue(),
+                        String.format("Severe weather alert for %s: %s. Temperature: %.1f°C, Wind: %.1f m/s",
+                                weatherData.getCityName(), weatherData.getDescription(),
+                                weatherData.getTemperature(), weatherData.getWindSpeed()),
+                        "HIGH",
+                        metadata
+                );
+                break; // Only send one severe weather alert
             }
-        } catch (Exception e) {
-            log.error("Error sending push notification: {}", e.getMessage());
         }
     }
 
-    private void sendEmailNotification(WeatherNotification notification) {
-        try {
-            if (shouldSendEmailNotification(notification)) {
-                // Email sending logic would go here
-                // This could integrate with SendGrid, AWS SES, or similar service
-                log.info("Email notification would be sent for: {}", notification.getTitle());
-            }
-        } catch (Exception e) {
-            log.error("Error sending email notification: {}", e.getMessage());
+    /**
+     * Check for rain conditions
+     */
+    private void checkRainConditions(String userId, WeatherData weatherData) {
+        String condition = weatherData.getCondition().toLowerCase();
+
+        if (condition.contains("rain") || condition.contains("drizzle") || condition.contains("shower")) {
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("location", weatherData.getCityName());
+            metadata.put("condition", weatherData.getCondition());
+            metadata.put("humidity", weatherData.getHumidity());
+
+            createWeatherAlert(
+                    userId,
+                    "RAIN_ALERT",
+                    "Rain Alert",
+                    String.format("Rain expected in %s: %s. Humidity: %d%%",
+                            weatherData.getCityName(), weatherData.getDescription(), weatherData.getHumidity()),
+                    "MEDIUM",
+                    metadata
+            );
         }
     }
 
-    private boolean shouldSendPushNotification(WeatherNotification notification) {
-        if (notification.getUserId() == null) return false;
+    /**
+     * Check for temperature threshold alerts
+     */
+    private void checkTemperatureThresholds(String userId, WeatherData weatherData, User user) {
+        double temperature = weatherData.getTemperature();
+        double minThreshold = user.getPreferences().getMinTemperatureThreshold();
+        double maxThreshold = user.getPreferences().getMaxTemperatureThreshold();
 
-        NotificationSettings settings = getUserNotificationSettings(notification.getUserId());
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("location", weatherData.getCityName());
+        metadata.put("temperature", temperature);
+        metadata.put("feelsLike", weatherData.getFeelsLike());
 
-        switch (notification.getType()) {
-            case WEATHER_ALERT:
-                return settings.isWeatherAlertsEnabled();
-            case HEALTH_ALERT:
-                return settings.isHealthAlertsEnabled();
-            case DAILY_SUMMARY:
-                return settings.isDailySummaryEnabled();
-            case CUSTOM_REMINDER:
-                return settings.isCustomRemindersEnabled();
-            default:
-                return true;
+        if (temperature <= minThreshold) {
+            createWeatherAlert(
+                    userId,
+                    "TEMPERATURE_ALERT",
+                    "Low Temperature Alert",
+                    String.format("Temperature in %s has dropped to %.1f°C (feels like %.1f°C), below your threshold of %.1f°C",
+                            weatherData.getCityName(), temperature, weatherData.getFeelsLike(), minThreshold),
+                    "MEDIUM",
+                    metadata
+            );
+        } else if (temperature >= maxThreshold) {
+            createWeatherAlert(
+                    userId,
+                    "TEMPERATURE_ALERT",
+                    "High Temperature Alert",
+                    String.format("Temperature in %s has risen to %.1f°C (feels like %.1f°C), above your threshold of %.1f°C",
+                            weatherData.getCityName(), temperature, weatherData.getFeelsLike(), maxThreshold),
+                    "MEDIUM",
+                    metadata
+            );
         }
     }
 
-    private boolean shouldSendEmailNotification(WeatherNotification notification) {
-        if (notification.getUserId() == null) return false;
+    /**
+     * Check for air quality conditions
+     */
+    private void checkAirQualityConditions(String userId, WeatherData weatherData) {
+        // Assuming AQI is stored in weather data or fetched separately
+        if (weatherData.getAqi() != null && weatherData.getAqi() > 150) { // Unhealthy level
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("location", weatherData.getCityName());
+            metadata.put("aqi", weatherData.getAqi());
 
-        NotificationSettings settings = getUserNotificationSettings(notification.getUserId());
-        return settings.isEmailNotificationsEnabled() &&
-                notification.getPriority() == NotificationPriority.HIGH;
-    }
+            String severity = weatherData.getAqi() > 200 ? "HIGH" : "MEDIUM";
+            String alertLevel = weatherData.getAqi() > 200 ? "Very Unhealthy" : "Unhealthy";
 
-    private String buildDailyWeatherMessage(WeatherData weather) {
-        StringBuilder message = new StringBuilder();
-        message.append(String.format("Good morning! Today in %s: ", weather.getLocation().getCity()));
-        message.append(String.format("%s°C, %s. ", weather.getTemperature(), weather.getCondition()));
-        message.append(String.format("Feels like %s°C. ", weather.getFeelsLike()));
-
-        if (weather.getCondition().toLowerCase().contains("rain")) {
-            message.append("Don't forget your umbrella! ");
-        }
-
-        if (weather.getTemperature() < 10) {
-            message.append("Bundle up, it's cold today! ");
-        } else if (weather.getTemperature() > 30) {
-            message.append("Stay hydrated, it's going to be hot! ");
-        }
-
-        return message.toString();
-    }
-
-    private String getCustomReminderTitle(String reminderType) {
-        switch (reminderType.toLowerCase()) {
-            case "umbrella":
-                return "☔ Don't Forget Your Umbrella!";
-            case "sunscreen":
-                return "☀️ UV Alert - Apply Sunscreen";
-            case "jacket":
-                return "🧥 It's Cold - Wear a Jacket";
-            case "hydration":
-                return "💧 Stay Hydrated Today";
-            case "allergy":
-                return "🤧 High Pollen Alert";
-            default:
-                return "🌤️ Weather Reminder";
+            createWeatherAlert(
+                    userId,
+                    "AIR_QUALITY_ALERT",
+                    "Air Quality Alert",
+                    String.format("Air quality in %s is %s (AQI: %d). Consider limiting outdoor activities.",
+                            weatherData.getCityName(), alertLevel, weatherData.getAqi()),
+                    severity,
+                    metadata
+            );
         }
     }
 
-    private NotificationSettings getDefaultNotificationSettings() {
-        return NotificationSettings.builder()
-                .weatherAlertsEnabled(true)
-                .healthAlertsEnabled(true)
-                .dailySummaryEnabled(false)
-                .customRemindersEnabled(true)
-                .emailNotificationsEnabled(false)
-                .pushNotificationsEnabled(true)
-                .quietHoursStart(22) // 10 PM
-                .quietHoursEnd(7)    // 7 AM
-                .build();
-    }
-
-    public void scheduleWeatherAlerts(String userId, Location location, List<String> alertTypes) {
-        try {
-            log.info("Scheduling weather alerts for user: {} at {}", userId, location.getCity());
-
-            // Save user's alert preferences
-            UserAlertPreferences preferences = UserAlertPreferences.builder()
-                    .userId(userId)
-                    .location(location)
-                    .alertTypes(alertTypes)
-                    .isActive(true)
-                    .createdAt(LocalDateTime.now())
-                    .build();
-
-            notificationRepository.saveUserAlertPreferences(preferences);
-
-        } catch (Exception e) {
-            log.error("Error scheduling weather alerts: {}", e.getMessage());
-        }
-    }
-
-    public void cancelWeatherAlerts(String userId, Location location) {
-        try {
-            log.info("Cancelling weather alerts for user: {} at {}", userId, location.getCity());
-            notificationRepository.deactivateUserAlertPreferences(userId, location);
-        } catch (Exception e) {
-            log.error("Error cancelling weather alerts: {}", e.getMessage());
-        }
-    }
-
+    /**
+     * Send notification asynchronously
+     */
     @Async
-    public CompletableFuture<Void> sendBulkNotifications(List<WeatherNotification> notifications) {
+    public CompletableFuture<Void> sendNotificationAsync(String userId, WeatherAlert alert) {
         try {
-            log.info("Sending {} bulk notifications", notifications.size());
-
-            for (WeatherNotification notification : notifications) {
-                notificationRepository.save(notification);
-                sendPushNotification(notification);
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null && user.getEmail() != null) {
+                sendEmailNotification(user.getEmail(), alert);
             }
 
-            log.info("Bulk notifications sent successfully");
+            // Here you could also send push notifications, SMS, etc.
+            sendPushNotification(userId, alert);
 
         } catch (Exception e) {
-            log.error("Error sending bulk notifications: {}", e.getMessage());
+            logger.error("Failed to send notification for alert {}: {}", alert.getId(), e.getMessage());
         }
 
         return CompletableFuture.completedFuture(null);
     }
 
-    public NotificationStats getNotificationStats(String userId) {
+    /**
+     * Send email notification
+     */
+    private void sendEmailNotification(String email, WeatherAlert alert) {
         try {
-            return notificationRepository.getNotificationStats(userId);
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email);
+            message.setSubject("Weather Alert: " + alert.getTitle());
+            message.setText(alert.getMessage() + "\n\nThis is an automated weather alert from WeatherApp.");
+
+            mailSender.send(message);
+            logger.info("Email notification sent for alert: {}", alert.getId());
+
         } catch (Exception e) {
-            log.error("Error fetching notification stats: {}", e.getMessage());
-            return NotificationStats.builder()
-                    .totalSent(0)
-                    .totalRead(0)
-                    .totalUnread(0)
-                    .build();
+            logger.error("Failed to send email notification: {}", e.getMessage());
         }
     }
+
+    /**
+     * Send push notification (placeholder implementation)
+     */
+    private void sendPushNotification(String userId, WeatherAlert alert) {
+        // Implementation would depend on your push notification service (FCM, APNS, etc.)
+        try {
+            // Placeholder for push notification logic
+            logger.info("Push notification sent to user {} for alert: {}", userId, alert.getId());
+
+        } catch (Exception e) {
+            logger.error("Failed to send push notification: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Get user's weather alerts
+     */
+    public List<WeatherAlert> getUserAlerts(String userId, boolean includeRead) {
+        if (includeRead) {
+            return weatherAlertRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        } else {
+            return weatherAlertRepository.findByUserIdAndIsReadOrderByCreatedAtDesc(userId, false);
+        }
+    }
+
+    /**
+     * Get active alerts for user
+     */
+    public List<WeatherAlert> getActiveAlerts(String userId) {
+        return weatherAlertRepository.findByUserIdAndIsActiveOrderByCreatedAtDesc(userId, true);
+    }
+
+    /**
+     * Mark alert as read
+     */
+    public WeatherAlert markAlertAsRead(String alertId, String userId) {
+        WeatherAlert alert = weatherAlertRepository.findById(alertId)
+                .orElseThrow(() -> new InvalidRequestException("Alert not found"));
+
+        if (!alert.getUserId().equals(userId)) {
+            throw new InvalidRequestException("Unauthorized access to alert");
+        }
+
+        alert.setIsRead(true);
+        alert.setReadAt(LocalDateTime.now());
+        return weatherAlertRepository.save(alert);
+    }
+
+    /**
+     * Mark multiple alerts as read
+     */
+    public List<WeatherAlert> markAlertsAsRead(List<String> alertIds, String userId) {
+        List<WeatherAlert> alerts = weatherAlertRepository.findAllById(alertIds);
+
+        return alerts.stream()
+                .filter(alert -> alert.getUserId().equals(userId))
+                .map(alert -> {
+                    alert.setIsRead(true);
+                    alert.setReadAt(LocalDateTime.now());
+                    return weatherAlertRepository.save(alert);
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Dismiss/deactivate alert
+     */
+    public WeatherAlert dismissAlert(String alertId, String userId) {
+        WeatherAlert alert = weatherAlertRepository.findById(alertId)
+                .orElseThrow(() -> new InvalidRequestException("Alert not found"));
+
+        if (!alert.getUserId().equals(userId)) {
+            throw new InvalidRequestException("Unauthorized access to alert");
+        }
+
+        alert.setIsActive(false);
+        alert.setDismissedAt(LocalDateTime.now());
+        return weatherAlertRepository.save(alert);
+    }
+
+    /**
+     * Get alert statistics for user
+     */
+    public Map<String, Object> getAlertStatistics(String userId) {
+        List<WeatherAlert> allAlerts = weatherAlertRepository.findByUserId(userId);
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalAlerts", allAlerts.size());
+        stats.put("unreadAlerts", allAlerts.stream().filter(a -> !a.getIsRead()).count());
+        stats.put("activeAlerts", allAlerts.stream().filter(a -> a.getIsActive()).count());
+
+        // Group by alert type
+        Map<String, Long> alertsByType = allAlerts.stream()
+                .collect(Collectors.groupingBy(WeatherAlert::getAlertType, Collectors.counting()));
+        stats.put("alertsByType", alertsByType);
+
+        // Group by severity
+        Map<String, Long> alertsBySeverity = allAlerts.stream()
+                .collect(Collectors.groupingBy(WeatherAlert::getSeverity, Collectors.counting()));
+        stats.put("alertsBySeverity", alertsBySeverity);
+
+        return stats;
+    }
+
+    /**
+     * Clean up old alerts (keep only recent 100 alerts per user)
+     */
+    public void cleanupOldAlerts(String userId) {
+        List<WeatherAlert> userAlerts = weatherAlertRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        if (userAlerts.size() > 100) {
+            List<WeatherAlert> alertsToDelete = userAlerts.subList(100, userAlerts.size());
+            weatherAlertRepository.deleteAll(alertsToDelete);
+            logger.info("Cleaned up {} old alerts for user {}", alertsToDelete.size(), userId);
+        }
+    }
+
+    /**
+     * Send test notification
+     */
+    public WeatherAlert sendTestNotification(String userId) {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("test", true);
+
+        return createWeatherAlert(
+                userId,
+                "TEST_ALERT",
+                "Test Notification",
+                "This is a test notification to verify your alert settings are working correctly.",
+                "LOW",
+                metadata
+        );
+    }
+
+    /**
+     * Check if user has unread alerts
+     */
+    public boolean hasUnreadAlerts(String userId) {
+        return weatherAlertRepository.existsByUserIdAndIsRead(userId, false);
+    }
+
+    /**
+     * Get unread alert count
+     */
+    public long getUnreadAlertCount(String userId) {
+        return weatherAlertRepository.countByUserIdAndIsRead(userId, false);
+    }
+
+    /**
+     * Create bulk weather alerts for multiple users
+     */
+    @Async
+    public CompletableFuture<Void> createBulkWeatherAlerts(List<String> userIds, String alertType,
+                                                           String title, String message, String severity, Map<String, Object> metadata) {
+
+        try {
+            List<WeatherAlert> alerts = userIds.stream()
+                    .map(userId -> {
+                        WeatherAlert alert = new WeatherAlert();
+                        alert.setUserId(userId);
+                        alert.setAlertType(alertType);
+                        alert.setTitle(title);
+                        alert.setMessage(message);
+                        alert.setSeverity(severity);
+                        alert.setMetadata(metadata);
+                        alert.setCreatedAt(LocalDateTime.now());
+                        alert.setIsRead(false);
+                        alert.setIsActive(true);
+                        return alert;
+                    })
+                    .collect(Collectors.toList());
+
+            List<WeatherAlert> savedAlerts = weatherAlertRepository.saveAll(alerts);
+
+            // Send notifications for all alerts
+            for (WeatherAlert alert : savedAlerts) {
+                sendNotificationAsync(alert.getUserId(), alert);
+            }
+
+            logger.info("Created {} bulk weather alerts", savedAlerts.size());
+
+        } catch (Exception e) {
+            logger.error("Failed to create bulk weather alerts: {}", e.getMessage());
+        }
+
+        return CompletableFuture.completedFuture(null);
+    }
+}
