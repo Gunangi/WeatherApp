@@ -1,386 +1,397 @@
-// UserSettingsDto.java
 package com.example.weatherapp.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Pattern;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 import java.util.List;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserSettingsDto {
 
-    @NotNull(message = "User ID is required")
+    @JsonProperty("userId")
     private String userId;
 
-    // Theme settings
-    @Pattern(regexp = "^(light|dark|auto)$", message = "Theme must be light, dark, or auto")
-    private String theme;
+    @JsonProperty("email")
+    @Email(message = "Please provide a valid email address")
+    private String email;
 
-    @Pattern(regexp = "^(blue|green|purple|orange|red|pink|indigo|teal)$",
-            message = "Invalid color scheme")
-    private String colorScheme;
+    // Temperature and Units Preferences
+    @JsonProperty("temperatureUnit")
+    @NotNull(message = "Temperature unit cannot be null")
+    private TemperatureUnit temperatureUnit = TemperatureUnit.CELSIUS;
 
-    // Unit preferences
-    @Pattern(regexp = "^(celsius|fahrenheit)$", message = "Temperature unit must be celsius or fahrenheit")
-    private String temperatureUnit;
+    @JsonProperty("windSpeedUnit")
+    private WindSpeedUnit windSpeedUnit = WindSpeedUnit.METERS_PER_SECOND;
 
-    @Pattern(regexp = "^(ms|kmh|mph)$", message = "Wind speed unit must be ms, kmh, or mph")
-    private String windSpeedUnit;
+    @JsonProperty("pressureUnit")
+    private PressureUnit pressureUnit = PressureUnit.HPA;
 
-    @Pattern(regexp = "^(hpa|mmhg|inhg)$", message = "Pressure unit must be hpa, mmhg, or inhg")
-    private String pressureUnit;
+    @JsonProperty("visibilityUnit")
+    private VisibilityUnit visibilityUnit = VisibilityUnit.KILOMETERS;
 
-    @Pattern(regexp = "^(km|miles)$", message = "Visibility unit must be km or miles")
-    private String visibilityUnit;
+    @JsonProperty("precipitationUnit")
+    private PrecipitationUnit precipitationUnit = PrecipitationUnit.MILLIMETERS;
 
-    @Pattern(regexp = "^(mm|inches)$", message = "Precipitation unit must be mm or inches")
-    private String precipitationUnit;
+    // Theme and Display Preferences
+    @JsonProperty("theme")
+    private ThemeMode theme = ThemeMode.AUTO;
 
-    // Notification settings
-    private Boolean notificationsEnabled;
-    private Boolean weatherAlertsEnabled;
-    private Boolean rainAlertsEnabled;
-    private Boolean temperatureAlertsEnabled;
-    private Boolean uvIndexAlertsEnabled;
-    private Boolean airQualityAlertsEnabled;
+    @JsonProperty("language")
+    private String language = "en";
 
-    // Alert thresholds
-    @Min(value = -50, message = "Minimum temperature alert must be at least -50°C")
-    @Max(value = 50, message = "Minimum temperature alert must be at most 50°C")
-    private Double minTemperatureAlert;
+    @JsonProperty("timeFormat")
+    private TimeFormat timeFormat = TimeFormat.HOUR_24;
 
-    @Min(value = -50, message = "Maximum temperature alert must be at least -50°C")
-    @Max(value = 70, message = "Maximum temperature alert must be at most 70°C")
-    private Double maxTemperatureAlert;
+    @JsonProperty("dateFormat")
+    private String dateFormat = "DD/MM/YYYY";
 
-    @Min(value = 0, message = "AQI alert threshold must be at least 0")
-    @Max(value = 500, message = "AQI alert threshold must be at most 500")
-    private Integer aqiAlertThreshold;
+    // Location Preferences
+    @JsonProperty("defaultLocation")
+    private LocationDto defaultLocation;
 
-    @Min(value = 0, message = "UV index alert threshold must be at least 0")
-    @Max(value = 15, message = "UV index alert threshold must be at most 15")
-    private Double uvIndexAlertThreshold;
+    @JsonProperty("favoriteLocations")
+    private List<LocationDto> favoriteLocations;
 
-    // Display preferences
-    private Boolean showFeelsLike;
-    private Boolean showHumidity;
-    private Boolean showWindSpeed;
-    private Boolean showPressure;
-    private Boolean showVisibility;
-    private Boolean showUvIndex;
-    private Boolean showAirQuality;
-    private Boolean show24HourFormat;
+    @JsonProperty("autoLocationDetection")
+    private boolean autoLocationDetection = true;
 
-    // Dashboard preferences
-    private List<String> enabledWidgets;
-    private String defaultLocation;
-    private List<String> favoriteLocations;
-    private Boolean autoLocationDetection;
+    @JsonProperty("locationHistoryEnabled")
+    private boolean locationHistoryEnabled = true;
 
-    // Data refresh settings
-    @Min(value = 1, message = "Refresh interval must be at least 1 minute")
-    @Max(value = 1440, message = "Refresh interval must be at most 1440 minutes (24 hours)")
-    private Integer refreshInterval;
+    @JsonProperty("maxLocationHistory")
+    @Min(5) @Max(50)
+    private int maxLocationHistory = 20;
 
-    private Boolean autoRefresh;
+    // Notification Preferences
+    @JsonProperty("notificationsEnabled")
+    private boolean notificationsEnabled = true;
 
-    // Language and locale
-    @Pattern(regexp = "^[a-z]{2}$", message = "Language must be a valid 2-letter language code")
-    private String language;
+    @JsonProperty("weatherAlertsEnabled")
+    private boolean weatherAlertsEnabled = true;
 
-    private String timezone;
+    @JsonProperty("dailyForecastNotification")
+    private boolean dailyForecastNotification = false;
 
-    // Privacy settings
-    private Boolean shareLocation;
-    private Boolean dataCollection;
+    @JsonProperty("rainAlertEnabled")
+    private boolean rainAlertEnabled = true;
+
+    @JsonProperty("temperatureThresholdAlerts")
+    private boolean temperatureThresholdAlerts = false;
+
+    @JsonProperty("minTemperatureThreshold")
+    private Double minTemperatureThreshold;
+
+    @JsonProperty("maxTemperatureThreshold")
+    private Double maxTemperatureThreshold;
+
+    @JsonProperty("airQualityAlerts")
+    private boolean airQualityAlerts = true;
+
+    @JsonProperty("uvIndexAlerts")
+    private boolean uvIndexAlerts = false;
+
+    @JsonProperty("notificationTime")
+    @JsonFormat(pattern = "HH:mm")
+    private String notificationTime = "08:00";
+
+    // Widget and Dashboard Preferences
+    @JsonProperty("dashboardWidgets")
+    private List<String> dashboardWidgets;
+
+    @JsonProperty("widgetLayout")
+    private String widgetLayout = "grid";
+
+    @JsonProperty("showFeelsLikeTemperature")
+    private boolean showFeelsLikeTemperature = true;
+
+    @JsonProperty("showHumidity")
+    private boolean showHumidity = true;
+
+    @JsonProperty("showWindSpeed")
+    private boolean showWindSpeed = true;
+
+    @JsonProperty("showPressure")
+    private boolean showPressure = true;
+
+    @JsonProperty("showVisibility")
+    private boolean showVisibility = false;
+
+    @JsonProperty("showUvIndex")
+    private boolean showUvIndex = false;
+
+    @JsonProperty("showAirQuality")
+    private boolean showAirQuality = true;
+
+    @JsonProperty("show24HourForecast")
+    private boolean show24HourForecast = true;
+
+    @JsonProperty("forecastDays")
+    @Min(3) @Max(14)
+    private int forecastDays = 5;
+
+    // Activity and Recommendation Preferences
+    @JsonProperty("activityRecommendationsEnabled")
+    private boolean activityRecommendationsEnabled = true;
+
+    @JsonProperty("clothingRecommendationsEnabled")
+    private boolean clothingRecommendationsEnabled = true;
+
+    @JsonProperty("preferredActivities")
+    private List<String> preferredActivities;
+
+    @JsonProperty("activityDifficultyLevel")
+    private ActivityLevel activityDifficultyLevel = ActivityLevel.MODERATE;
+
+    // Privacy and Data Preferences
+    @JsonProperty("shareLocationData")
+    private boolean shareLocationData = false;
+
+    @JsonProperty("shareUsageStatistics")
+    private boolean shareUsageStatistics = true;
+
+    @JsonProperty("dataRetentionPeriod")
+    @Min(30) @Max(365)
+    private int dataRetentionPeriod = 90; // days
+
+    // Advanced Features
+    @JsonProperty("premiumFeaturesEnabled")
+    private boolean premiumFeaturesEnabled = false;
+
+    @JsonProperty("extendedForecastEnabled")
+    private boolean extendedForecastEnabled = false;
+
+    @JsonProperty("historicalWeatherEnabled")
+    private boolean historicalWeatherEnabled = false;
+
+    @JsonProperty("weatherComparison")
+    private boolean weatherComparison = false;
+
+    // Timestamps
+    @JsonProperty("createdAt")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createdAt;
+
+    @JsonProperty("updatedAt")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updatedAt;
+
+    @JsonProperty("lastLoginAt")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastLoginAt;
 
     // Constructors
-    public UserSettingsDto() {}
+    public UserSettingsDto() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
 
-    public UserSettingsDto(String userId) {
+    public UserSettingsDto(String userId, String email) {
+        this();
         this.userId = userId;
+        this.email = email;
+    }
+
+    // Enums
+    public enum TemperatureUnit {
+        CELSIUS, FAHRENHEIT, KELVIN
+    }
+
+    public enum WindSpeedUnit {
+        METERS_PER_SECOND, KILOMETERS_PER_HOUR, MILES_PER_HOUR, KNOTS
+    }
+
+    public enum PressureUnit {
+        HPA, MMHG, INHG, KPA, PSI
+    }
+
+    public enum VisibilityUnit {
+        KILOMETERS, MILES, METERS
+    }
+
+    public enum PrecipitationUnit {
+        MILLIMETERS, INCHES
+    }
+
+    public enum ThemeMode {
+        LIGHT, DARK, AUTO
+    }
+
+    public enum TimeFormat {
+        HOUR_12, HOUR_24
+    }
+
+    public enum ActivityLevel {
+        BEGINNER, MODERATE, ADVANCED, EXPERT
     }
 
     // Getters and Setters
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 
-    public String getTheme() { return theme; }
-    public void setTheme(String theme) { this.theme = theme; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public String getColorScheme() { return colorScheme; }
-    public void setColorScheme(String colorScheme) { this.colorScheme = colorScheme; }
+    public TemperatureUnit getTemperatureUnit() { return temperatureUnit; }
+    public void setTemperatureUnit(TemperatureUnit temperatureUnit) { this.temperatureUnit = temperatureUnit; }
 
-    public String getTemperatureUnit() { return temperatureUnit; }
-    public void setTemperatureUnit(String temperatureUnit) { this.temperatureUnit = temperatureUnit; }
+    public WindSpeedUnit getWindSpeedUnit() { return windSpeedUnit; }
+    public void setWindSpeedUnit(WindSpeedUnit windSpeedUnit) { this.windSpeedUnit = windSpeedUnit; }
 
-    public String getWindSpeedUnit() { return windSpeedUnit; }
-    public void setWindSpeedUnit(String windSpeedUnit) { this.windSpeedUnit = windSpeedUnit; }
+    public PressureUnit getPressureUnit() { return pressureUnit; }
+    public void setPressureUnit(PressureUnit pressureUnit) { this.pressureUnit = pressureUnit; }
 
-    public String getPressureUnit() { return pressureUnit; }
-    public void setPressureUnit(String pressureUnit) { this.pressureUnit = pressureUnit; }
+    public VisibilityUnit getVisibilityUnit() { return visibilityUnit; }
+    public void setVisibilityUnit(VisibilityUnit visibilityUnit) { this.visibilityUnit = visibilityUnit; }
 
-    public String getVisibilityUnit() { return visibilityUnit; }
-    public void setVisibilityUnit(String visibilityUnit) { this.visibilityUnit = visibilityUnit; }
+    public PrecipitationUnit getPrecipitationUnit() { return precipitationUnit; }
+    public void setPrecipitationUnit(PrecipitationUnit precipitationUnit) { this.precipitationUnit = precipitationUnit; }
 
-    public String getPrecipitationUnit() { return precipitationUnit; }
-    public void setPrecipitationUnit(String precipitationUnit) { this.precipitationUnit = precipitationUnit; }
-
-    public Boolean getNotificationsEnabled() { return notificationsEnabled; }
-    public void setNotificationsEnabled(Boolean notificationsEnabled) { this.notificationsEnabled = notificationsEnabled; }
-
-    public Boolean getWeatherAlertsEnabled() { return weatherAlertsEnabled; }
-    public void setWeatherAlertsEnabled(Boolean weatherAlertsEnabled) { this.weatherAlertsEnabled = weatherAlertsEnabled; }
-
-    public Boolean getRainAlertsEnabled() { return rainAlertsEnabled; }
-    public void setRainAlertsEnabled(Boolean rainAlertsEnabled) { this.rainAlertsEnabled = rainAlertsEnabled; }
-
-    public Boolean getTemperatureAlertsEnabled() { return temperatureAlertsEnabled; }
-    public void setTemperatureAlertsEnabled(Boolean temperatureAlertsEnabled) { this.temperatureAlertsEnabled = temperatureAlertsEnabled; }
-
-    public Boolean getUvIndexAlertsEnabled() { return uvIndexAlertsEnabled; }
-    public void setUvIndexAlertsEnabled(Boolean uvIndexAlertsEnabled) { this.uvIndexAlertsEnabled = uvIndexAlertsEnabled; }
-
-    public Boolean getAirQualityAlertsEnabled() { return airQualityAlertsEnabled; }
-    public void setAirQualityAlertsEnabled(Boolean airQualityAlertsEnabled) { this.airQualityAlertsEnabled = airQualityAlertsEnabled; }
-
-    public Double getMinTemperatureAlert() { return minTemperatureAlert; }
-    public void setMinTemperatureAlert(Double minTemperatureAlert) { this.minTemperatureAlert = minTemperatureAlert; }
-
-    public Double getMaxTemperatureAlert() { return maxTemperatureAlert; }
-    public void setMaxTemperatureAlert(Double maxTemperatureAlert) { this.maxTemperatureAlert = maxTemperatureAlert; }
-
-    public Integer getAqiAlertThreshold() { return aqiAlertThreshold; }
-    public void setAqiAlertThreshold(Integer aqiAlertThreshold) { this.aqiAlertThreshold = aqiAlertThreshold; }
-
-    public Double getUvIndexAlertThreshold() { return uvIndexAlertThreshold; }
-    public void setUvIndexAlertThreshold(Double uvIndexAlertThreshold) { this.uvIndexAlertThreshold = uvIndexAlertThreshold; }
-
-    public Boolean getShowFeelsLike() { return showFeelsLike; }
-    public void setShowFeelsLike(Boolean showFeelsLike) { this.showFeelsLike = showFeelsLike; }
-
-    public Boolean getShowHumidity() { return showHumidity; }
-    public void setShowHumidity(Boolean showHumidity) { this.showHumidity = showHumidity; }
-
-    public Boolean getShowWindSpeed() { return showWindSpeed; }
-    public void setShowWindSpeed(Boolean showWindSpeed) { this.showWindSpeed = showWindSpeed; }
-
-    public Boolean getShowPressure() { return showPressure; }
-    public void setShowPressure(Boolean showPressure) { this.showPressure = showPressure; }
-
-    public Boolean getShowVisibility() { return showVisibility; }
-    public void setShowVisibility(Boolean showVisibility) { this.showVisibility = showVisibility; }
-
-    public Boolean getShowUvIndex() { return showUvIndex; }
-    public void setShowUvIndex(Boolean showUvIndex) { this.showUvIndex = showUvIndex; }
-
-    public Boolean getShowAirQuality() { return showAirQuality; }
-    public void setShowAirQuality(Boolean showAirQuality) { this.showAirQuality = showAirQuality; }
-
-    public Boolean getShow24HourFormat() { return show24HourFormat; }
-    public void setShow24HourFormat(Boolean show24HourFormat) { this.show24HourFormat = show24HourFormat; }
-
-    public List<String> getEnabledWidgets() { return enabledWidgets; }
-    public void setEnabledWidgets(List<String> enabledWidgets) { this.enabledWidgets = enabledWidgets; }
-
-    public String getDefaultLocation() { return defaultLocation; }
-    public void setDefaultLocation(String defaultLocation) { this.defaultLocation = defaultLocation; }
-
-    public List<String> getFavoriteLocations() { return favoriteLocations; }
-    public void setFavoriteLocations(List<String> favoriteLocations) { this.favoriteLocations = favoriteLocations; }
-
-    public Boolean getAutoLocationDetection() { return autoLocationDetection; }
-    public void setAutoLocationDetection(Boolean autoLocationDetection) { this.autoLocationDetection = autoLocationDetection; }
-
-    public Integer getRefreshInterval() { return refreshInterval; }
-    public void setRefreshInterval(Integer refreshInterval) { this.refreshInterval = refreshInterval; }
-
-    public Boolean getAutoRefresh() { return autoRefresh; }
-    public void setAutoRefresh(Boolean autoRefresh) { this.autoRefresh = autoRefresh; }
+    public ThemeMode getTheme() { return theme; }
+    public void setTheme(ThemeMode theme) { this.theme = theme; }
 
     public String getLanguage() { return language; }
     public void setLanguage(String language) { this.language = language; }
 
-    public String getTimezone() { return timezone; }
-    public void setTimezone(String timezone) { this.timezone = timezone; }
+    public TimeFormat getTimeFormat() { return timeFormat; }
+    public void setTimeFormat(TimeFormat timeFormat) { this.timeFormat = timeFormat; }
 
-    public Boolean getShareLocation() { return shareLocation; }
-    public void setShareLocation(Boolean shareLocation) { this.shareLocation = shareLocation; }
+    public String getDateFormat() { return dateFormat; }
+    public void setDateFormat(String dateFormat) { this.dateFormat = dateFormat; }
 
-    public Boolean getDataCollection() { return dataCollection; }
-    public void setDataCollection(Boolean dataCollection) { this.dataCollection = dataCollection; }
+    public LocationDto getDefaultLocation() { return defaultLocation; }
+    public void setDefaultLocation(LocationDto defaultLocation) { this.defaultLocation = defaultLocation; }
 
-    // Utility methods for validation
-    public boolean isValidTheme() {
-        return theme != null && (theme.equals("light") || theme.equals("dark") || theme.equals("auto"));
-    }
+    public List<LocationDto> getFavoriteLocations() { return favoriteLocations; }
+    public void setFavoriteLocations(List<LocationDto> favoriteLocations) { this.favoriteLocations = favoriteLocations; }
 
-    public boolean isValidTemperatureUnit() {
-        return temperatureUnit != null && (temperatureUnit.equals("celsius") || temperatureUnit.equals("fahrenheit"));
-    }
+    public boolean isAutoLocationDetection() { return autoLocationDetection; }
+    public void setAutoLocationDetection(boolean autoLocationDetection) { this.autoLocationDetection = autoLocationDetection; }
 
-    public boolean hasTemperatureAlerts() {
-        return Boolean.TRUE.equals(temperatureAlertsEnabled) &&
-                (minTemperatureAlert != null || maxTemperatureAlert != null);
-    }
+    public boolean isLocationHistoryEnabled() { return locationHistoryEnabled; }
+    public void setLocationHistoryEnabled(boolean locationHistoryEnabled) { this.locationHistoryEnabled = locationHistoryEnabled; }
 
-    public boolean hasAirQualityAlert() {
-        return Boolean.TRUE.equals(airQualityAlertsEnabled) && aqiAlertThreshold != null;
-    }
+    public int getMaxLocationHistory() { return maxLocationHistory; }
+    public void setMaxLocationHistory(int maxLocationHistory) { this.maxLocationHistory = maxLocationHistory; }
 
-    public boolean hasUvIndexAlert() {
-        return Boolean.TRUE.equals(uvIndexAlertsEnabled) && uvIndexAlertThreshold != null;
-    }
+    public boolean isNotificationsEnabled() { return notificationsEnabled; }
+    public void setNotificationsEnabled(boolean notificationsEnabled) { this.notificationsEnabled = notificationsEnabled; }
 
-    public boolean isLocationBasedFeaturesEnabled() {
-        return Boolean.TRUE.equals(shareLocation) && Boolean.TRUE.equals(autoLocationDetection);
-    }
+    public boolean isWeatherAlertsEnabled() { return weatherAlertsEnabled; }
+    public void setWeatherAlertsEnabled(boolean weatherAlertsEnabled) { this.weatherAlertsEnabled = weatherAlertsEnabled; }
+
+    public boolean isDailyForecastNotification() { return dailyForecastNotification; }
+    public void setDailyForecastNotification(boolean dailyForecastNotification) { this.dailyForecastNotification = dailyForecastNotification; }
+
+    public boolean isRainAlertEnabled() { return rainAlertEnabled; }
+    public void setRainAlertEnabled(boolean rainAlertEnabled) { this.rainAlertEnabled = rainAlertEnabled; }
+
+    public boolean isTemperatureThresholdAlerts() { return temperatureThresholdAlerts; }
+    public void setTemperatureThresholdAlerts(boolean temperatureThresholdAlerts) { this.temperatureThresholdAlerts = temperatureThresholdAlerts; }
+
+    public Double getMinTemperatureThreshold() { return minTemperatureThreshold; }
+    public void setMinTemperatureThreshold(Double minTemperatureThreshold) { this.minTemperatureThreshold = minTemperatureThreshold; }
+
+    public Double getMaxTemperatureThreshold() { return maxTemperatureThreshold; }
+    public void setMaxTemperatureThreshold(Double maxTemperatureThreshold) { this.maxTemperatureThreshold = maxTemperatureThreshold; }
+
+    public boolean isAirQualityAlerts() { return airQualityAlerts; }
+    public void setAirQualityAlerts(boolean airQualityAlerts) { this.airQualityAlerts = airQualityAlerts; }
+
+    public boolean isUvIndexAlerts() { return uvIndexAlerts; }
+    public void setUvIndexAlerts(boolean uvIndexAlerts) { this.uvIndexAlerts = uvIndexAlerts; }
+
+    public String getNotificationTime() { return notificationTime; }
+    public void setNotificationTime(String notificationTime) { this.notificationTime = notificationTime; }
+
+    public List<String> getDashboardWidgets() { return dashboardWidgets; }
+    public void setDashboardWidgets(List<String> dashboardWidgets) { this.dashboardWidgets = dashboardWidgets; }
+
+    public String getWidgetLayout() { return widgetLayout; }
+    public void setWidgetLayout(String widgetLayout) { this.widgetLayout = widgetLayout; }
+
+    public boolean isShowFeelsLikeTemperature() { return showFeelsLikeTemperature; }
+    public void setShowFeelsLikeTemperature(boolean showFeelsLikeTemperature) { this.showFeelsLikeTemperature = showFeelsLikeTemperature; }
+
+    public boolean isShowHumidity() { return showHumidity; }
+    public void setShowHumidity(boolean showHumidity) { this.showHumidity = showHumidity; }
+
+    public boolean isShowWindSpeed() { return showWindSpeed; }
+    public void setShowWindSpeed(boolean showWindSpeed) { this.showWindSpeed = showWindSpeed; }
+
+    public boolean isShowPressure() { return showPressure; }
+    public void setShowPressure(boolean showPressure) { this.showPressure = showPressure; }
+
+    public boolean isShowVisibility() { return showVisibility; }
+    public void setShowVisibility(boolean showVisibility) { this.showVisibility = showVisibility; }
+
+    public boolean isShowUvIndex() { return showUvIndex; }
+    public void setShowUvIndex(boolean showUvIndex) { this.showUvIndex = showUvIndex; }
+
+    public boolean isShowAirQuality() { return showAirQuality; }
+    public void setShowAirQuality(boolean showAirQuality) { this.showAirQuality = showAirQuality; }
+
+    public boolean isShow24HourForecast() { return show24HourForecast; }
+    public void setShow24HourForecast(boolean show24HourForecast) { this.show24HourForecast = show24HourForecast; }
+
+    public int getForecastDays() { return forecastDays; }
+    public void setForecastDays(int forecastDays) { this.forecastDays = forecastDays; }
+
+    public boolean isActivityRecommendationsEnabled() { return activityRecommendationsEnabled; }
+    public void setActivityRecommendationsEnabled(boolean activityRecommendationsEnabled) { this.activityRecommendationsEnabled = activityRecommendationsEnabled; }
+
+    public boolean isClothingRecommendationsEnabled() { return clothingRecommendationsEnabled; }
+    public void setClothingRecommendationsEnabled(boolean clothingRecommendationsEnabled) { this.clothingRecommendationsEnabled = clothingRecommendationsEnabled; }
+
+    public List<String> getPreferredActivities() { return preferredActivities; }
+    public void setPreferredActivities(List<String> preferredActivities) { this.preferredActivities = preferredActivities; }
+
+    public ActivityLevel getActivityDifficultyLevel() { return activityDifficultyLevel; }
+    public void setActivityDifficultyLevel(ActivityLevel activityDifficultyLevel) { this.activityDifficultyLevel = activityDifficultyLevel; }
+
+    public boolean isShareLocationData() { return shareLocationData; }
+    public void setShareLocationData(boolean shareLocationData) { this.shareLocationData = shareLocationData; }
+
+    public boolean isShareUsageStatistics() { return shareUsageStatistics; }
+    public void setShareUsageStatistics(boolean shareUsageStatistics) { this.shareUsageStatistics = shareUsageStatistics; }
+
+    public int getDataRetentionPeriod() { return dataRetentionPeriod; }
+    public void setDataRetentionPeriod(int dataRetentionPeriod) { this.dataRetentionPeriod = dataRetentionPeriod; }
+
+    public boolean isPremiumFeaturesEnabled() { return premiumFeaturesEnabled; }
+    public void setPremiumFeaturesEnabled(boolean premiumFeaturesEnabled) { this.premiumFeaturesEnabled = premiumFeaturesEnabled; }
+
+    public boolean isExtendedForecastEnabled() { return extendedForecastEnabled; }
+    public void setExtendedForecastEnabled(boolean extendedForecastEnabled) { this.extendedForecastEnabled = extendedForecastEnabled; }
+
+    public boolean isHistoricalWeatherEnabled() { return historicalWeatherEnabled; }
+    public void setHistoricalWeatherEnabled(boolean historicalWeatherEnabled) { this.historicalWeatherEnabled = historicalWeatherEnabled; }
+
+    public boolean isWeatherComparison() { return weatherComparison; }
+    public void setWeatherComparison(boolean weatherComparison) { this.weatherComparison = weatherComparison; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public LocalDateTime getLastLoginAt() { return lastLoginAt; }
+    public void setLastLoginAt(LocalDateTime lastLoginAt) { this.lastLoginAt = lastLoginAt; }
 
     @Override
     public String toString() {
         return "UserSettingsDto{" +
                 "userId='" + userId + '\'' +
-                ", theme='" + theme + '\'' +
-                ", temperatureUnit='" + temperatureUnit + '\'' +
+                ", email='" + email + '\'' +
+                ", temperatureUnit=" + temperatureUnit +
+                ", theme=" + theme +
+                ", language='" + language + '\'' +
                 ", notificationsEnabled=" + notificationsEnabled +
-                ", autoLocationDetection=" + autoLocationDetection +
+                ", updatedAt=" + updatedAt +
                 '}';
     }
-}25(double pm25) { this.pm25 = pm25; }
-
-public double getPm10() { return pm10; }
-public void setPm10(double pm10) { this.pm10 = pm10; }
-
-public String getHealthRecommendation() { return healthRecommendation; }
-public void setHealthRecommendation(String healthRecommendation) { this.healthRecommendation = healthRecommendation; }
-    }
-
-public static class SunMoon {
-    @JsonFormat(pattern = "HH:mm:ss")
-    private LocalDateTime sunrise;
-    @JsonFormat(pattern = "HH:mm:ss")
-    private LocalDateTime sunset;
-    @JsonFormat(pattern = "HH:mm:ss")
-    private LocalDateTime moonrise;
-    @JsonFormat(pattern = "HH:mm:ss")
-    private LocalDateTime moonset;
-    private String moonPhase;
-    private double moonIllumination;
-
-    // Getters and Setters
-    public LocalDateTime getSunrise() { return sunrise; }
-    public void setSunrise(LocalDateTime sunrise) { this.sunrise = sunrise; }
-
-    public LocalDateTime getSunset() { return sunset; }
-    public void setSunset(LocalDateTime sunset) { this.sunset = sunset; }
-
-    public LocalDateTime getMoonrise() { return moonrise; }
-    public void setMoonrise(LocalDateTime moonrise) { this.moonrise = moonrise; }
-
-    public LocalDateTime getMoonset() { return moonset; }
-    public void setMoonset(LocalDateTime moonset) { this.moonset = moonset; }
-
-    public String getMoonPhase() { return moonPhase; }
-    public void setMoonPhase(String moonPhase) { this.moonPhase = moonPhase; }
-
-    public double getMoonIllumination() { return moonIllumination; }
-    public void setMoonIllumination(double moonIllumination) { this.moonIllumination = moonIllumination; }
-}
-
-public static class WeatherAlert {
-    private String alertId;
-    private String title;
-    private String description;
-    private String severity; // "minor", "moderate", "severe", "extreme"
-    private String certainty; // "observed", "likely", "possible"
-    private String urgency; // "immediate", "expected", "future"
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime startTime;
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime endTime;
-    private List<String> areas;
-    private String source;
-
-    // Getters and Setters
-    public String getAlertId() { return alertId; }
-    public void setAlertId(String alertId) { this.alertId = alertId; }
-
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-
-    public String getSeverity() { return severity; }
-    public void setSeverity(String severity) { this.severity = severity; }
-
-    public String getCertainty() { return certainty; }
-    public void setCertainty(String certainty) { this.certainty = certainty; }
-
-    public String getUrgency() { return urgency; }
-    public void setUrgency(String urgency) { this.urgency = urgency; }
-
-    public LocalDateTime getStartTime() { return startTime; }
-    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
-
-    public LocalDateTime getEndTime() { return endTime; }
-    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
-
-    public List<String> getAreas() { return areas; }
-    public void setAreas(List<String> areas) { this.areas = areas; }
-
-    public String getSource() { return source; }
-    public void setSource(String source) { this.source = source; }
-}
-
-// Main class getters and setters
-public String getCityName() { return cityName; }
-public void setCityName(String cityName) { this.cityName = cityName; }
-
-public String getCountryCode() { return countryCode; }
-public void setCountryCode(String countryCode) { this.countryCode = countryCode; }
-
-public String getCountryName() { return countryName; }
-public void setCountryName(String countryName) { this.countryName = countryName; }
-
-public double getLatitude() { return latitude; }
-public void setLatitude(double latitude) { this.latitude = latitude; }
-
-public double getLongitude() { return longitude; }
-public void setLongitude(double longitude) { this.longitude = longitude; }
-
-public String getTimezone() { return timezone; }
-public void setTimezone(String timezone) { this.timezone = timezone; }
-
-public LocalDateTime getLocalTime() { return localTime; }
-public void setLocalTime(LocalDateTime localTime) { this.localTime = localTime; }
-
-public CurrentWeather getCurrent() { return current; }
-public void setCurrent(CurrentWeather current) { this.current = current; }
-
-public List<DailyForecast> getDailyForecast() { return dailyForecast; }
-public void setDailyForecast(List<DailyForecast> dailyForecast) { this.dailyForecast = dailyForecast; }
-
-public List<HourlyForecast> getHourlyForecast() { return hourlyForecast; }
-public void setHourlyForecast(List<HourlyForecast> hourlyForecast) { this.hourlyForecast = hourlyForecast; }
-
-public AirQuality getAirQuality() { return airQuality; }
-public void setAirQuality(AirQuality airQuality) { this.airQuality = airQuality; }
-
-public SunMoon getSunMoon() { return sunMoon; }
-public void setSunMoon(SunMoon sunMoon) { this.sunMoon = sunMoon; }
-
-public List<WeatherAlert> getAlerts() { return alerts; }
-public void setAlerts(List<WeatherAlert> alerts) { this.alerts = alerts; }
-
-public LocalDateTime getLastUpdated() { return lastUpdated; }
-public void setLastUpdated(LocalDateTime lastUpdated) { this.lastUpdated = lastUpdated; }
-
-public String getDataSource() { return dataSource; }
-public void setDataSource(String dataSource) { this.dataSource = dataSource; }
-
-public boolean isCached() { return cached; }
-public void setCached(boolean cached) { this.cached = cached; }
 }
