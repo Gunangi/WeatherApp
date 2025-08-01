@@ -4,6 +4,7 @@ package com.example.weatherapp.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public class WeatherResponse {
 
@@ -27,6 +28,12 @@ public class WeatherResponse {
 
     // Air quality
     private AirQuality airQuality;
+
+    // Air quality related fields
+    private CurrentAirQuality currentAirQuality;
+    private List<AirQualityForecast> forecast;
+    private List<HistoricalAirQuality> historical;
+    private HealthRecommendations healthRecommendations;
 
     // Sun and moon
     private SunMoon sunMoon;
@@ -257,6 +264,7 @@ public class WeatherResponse {
         private double so2;
         private double pm25;
         private double pm10;
+        private String dominantPollutant;
         private String healthRecommendation;
 
         // Getters and Setters
@@ -289,6 +297,9 @@ public class WeatherResponse {
 
         public String getDominantPollutant() { return dominantPollutant; }
         public void setDominantPollutant(String dominantPollutant) { this.dominantPollutant = dominantPollutant; }
+
+        public String getHealthRecommendation() { return healthRecommendation; }
+        public void setHealthRecommendation(String healthRecommendation) { this.healthRecommendation = healthRecommendation; }
     }
 
     public static class HistoricalAirQuality {
@@ -397,8 +408,23 @@ public class WeatherResponse {
     public String getTimezone() { return timezone; }
     public void setTimezone(String timezone) { this.timezone = timezone; }
 
-    public CurrentAirQuality getCurrent() { return current; }
-    public void setCurrent(CurrentAirQuality current) { this.current = current; }
+    public LocalDateTime getLocalTime() { return localTime; }
+    public void setLocalTime(LocalDateTime localTime) { this.localTime = localTime; }
+
+    public CurrentWeather getCurrent() { return current; }
+    public void setCurrent(CurrentWeather current) { this.current = current; }
+
+    public List<DailyForecast> getDailyForecast() { return dailyForecast; }
+    public void setDailyForecast(List<DailyForecast> dailyForecast) { this.dailyForecast = dailyForecast; }
+
+    public List<HourlyForecast> getHourlyForecast() { return hourlyForecast; }
+    public void setHourlyForecast(List<HourlyForecast> hourlyForecast) { this.hourlyForecast = hourlyForecast; }
+
+    public AirQuality getAirQuality() { return airQuality; }
+    public void setAirQuality(AirQuality airQuality) { this.airQuality = airQuality; }
+
+    public CurrentAirQuality getCurrentAirQuality() { return currentAirQuality; }
+    public void setCurrentAirQuality(CurrentAirQuality currentAirQuality) { this.currentAirQuality = currentAirQuality; }
 
     public List<AirQualityForecast> getForecast() { return forecast; }
     public void setForecast(List<AirQualityForecast> forecast) { this.forecast = forecast; }
@@ -408,6 +434,12 @@ public class WeatherResponse {
 
     public HealthRecommendations getHealthRecommendations() { return healthRecommendations; }
     public void setHealthRecommendations(HealthRecommendations healthRecommendations) { this.healthRecommendations = healthRecommendations; }
+
+    public SunMoon getSunMoon() { return sunMoon; }
+    public void setSunMoon(SunMoon sunMoon) { this.sunMoon = sunMoon; }
+
+    public List<WeatherAlert> getAlerts() { return alerts; }
+    public void setAlerts(List<WeatherAlert> alerts) { this.alerts = alerts; }
 
     public LocalDateTime getLastUpdated() { return lastUpdated; }
     public void setLastUpdated(LocalDateTime lastUpdated) { this.lastUpdated = lastUpdated; }

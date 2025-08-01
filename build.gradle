@@ -7,7 +7,7 @@ plugins {
     id 'checkstyle'
 }
 
-group = 'com.weatherapp'
+group = 'com.example.weatherapp'
 version = '1.0.0'
 sourceCompatibility = '17'
 
@@ -304,4 +304,6 @@ tasks.withType(Test) {
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
     forkEvery = 100
 }
-
+compileJava {
+    inputs.files(bootBuildInfo)
+}
