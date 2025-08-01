@@ -1,177 +1,215 @@
 package com.example.weatherapp.controller;
 
-import com.example.weatherapp.dto.TravelDestinationDto;
-import com.example.weatherapp.dto.TravelRecommendationDto;
-import com.example.weatherapp.dto.MultiDestinationWeatherDto;
-import com.example.weatherapp.dto.TravelComparisonDto;
-import com.example.weatherapp.dto.ApiResponse;
-import com.example.weatherapp.service.WeatherService;
+import com.example.weatherapp.dto.TravelPlannerDto;
+import com.example.weatherapp.dto.WeatherResponse;
+import com.example.weatherapp.exception.InvalidRequestException;
+import com.example.weatherapp.exception.LocationNotFoundException;
+import com.example.weatherapp.service.TravelPlannerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
+import javax.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
+/**
+ * REST Controller for travel weather planning endpoints
+ * Handles multi-destination weather planning and travel recommendations
+ */
 @RestController
 @RequestMapping("/api/travel")
 @CrossOrigin(origins = "*")
 public class TravelController {
 
     @Autowired
-    private WeatherService weatherService;
+    private TravelPlannerService travelPlannerService;
 
-    @PostMapping("/multi-destination")
-    public ResponseEntity<ApiResponse<List<MultiDestinationWeatherDto>>> getMultiDestinationWeather(
-            @Valid @RequestBody @NotEmpty(message = "Destinations list cannot be empty")
-            List<TravelDestinationDto> destinations) {
-
-        List<MultiDestinationWeatherDto> weatherData = weatherService.getMultiDestinationWeather(destinations);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Multi-destination weather retrieved successfully", weatherData));
-    }
-
-    @PostMapping("/recommendations")
-    public ResponseEntity<ApiResponse<List<TravelRecommendationDto>>> getTravelRecommendations(
-            @Valid @RequestBody TravelPlanDto travelPlan) {
-
-        List<TravelRecommendationDto> recommendations = weatherService.getTravelRecommendations(
-                travelPlan.getDestinations(),
-                travelPlan.getTravelDates(),
-                travelPlan.getPreferences()
-        );
-        return ResponseEntity.ok(new ApiResponse<>(true, "Travel recommendations retrieved successfully", recommendations));
-    }
-
-    @GetMapping("/weather-for-dates")
-    public ResponseEntity<ApiResponse<Object>> getWeatherForDates(
-            @RequestParam @DecimalMin(value = "-90.0") @DecimalMax(value = "90.0") Double lat,
-            @RequestParam @DecimalMin(value = "-180.0") @DecimalMax(value = "180.0") Double lon,
+    /**
+     * Get weather forecast for multiple destinations
+     * @param destinations List of city names or coordinates
+     * @param startDate Start date of travel
+     * @param endDate End date of travel
+     * @return Multi-destination weather data
+     */
+    @GetMapping("/multi-destination")
+    public ResponseEntity<List<TravelPlannerDto>> getMultiDestinationWeather(
+            @RequestParam List<String> destinations,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
-        Object weatherData = weatherService.getWeatherForDateRange(lat, lon, startDate, endDate);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Weather for specified dates retrieved successfully", weatherData));
-    }
-
-    @PostMapping("/comparison")
-    public ResponseEntity<ApiResponse<TravelComparisonDto>> getTravelComparison(
-            @Valid @RequestBody TravelComparisonRequestDto request) {
-
-        if (request.getDestinations().size() < 2) {
-            return ResponseEntity.badRequest().body(
-                    new ApiResponse<>(false, "At least 2 destinations are required for comparison", null)
-            );
+        if (destinations.isEmpty()) {
+            throw new InvalidRequestException("At least one destination must be provided");
         }
 
-        TravelComparisonDto comparison = weatherService.getTravelComparison(
-                request.getDestinations(),
-                request.getDate()
-        );
-        return ResponseEntity.ok(new ApiResponse<>(true, "Travel comparison retrieved successfully", comparison));
+        if (startDate.isAfter(endDate)) {
+            throw new InvalidRequestException("Start date cannot be after end date");
+        }
+
+        List<TravelPlannerDto> travelData = travelPlannerService.getMultiDestinationWeather(
+                destinations, startDate, endDate);
+
+        return ResponseEntity.ok(travelData);
     }
 
-    @GetMapping("/best-time/{cityName}")
-    public ResponseEntity<ApiResponse<BestTimeToTravelDto>> getBestTimeToTravel(
-            @PathVariable String cityName,
-            @RequestParam(required = false) String activityType) {
-
-        BestTimeToTravelDto bestTime = weatherService.getBestTimeToTravel(cityName, activityType);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Best time to travel retrieved successfully", bestTime));
+    /**
+     * Get detailed travel plan with weather recommendations
+     * @param travelPlan Travel plan details including destinations, dates, and preferences
+     * @return Comprehensive travel weather plan
+     */
+    @PostMapping("/plan")
+    public ResponseEntity<TravelPlannerDto> createTravelPlan(@Valid @RequestBody TravelPlannerDto travelPlan) {
+        TravelPlannerDto detailedPlan = travelPlannerService.createDetailedTravelPlan(travelPlan);
+        return ResponseEntity.ok(detailedPlan);
     }
 
-    @PostMapping("/itinerary-weather")
-    public ResponseEntity<ApiResponse<List<ItineraryWeatherDto>>> getItineraryWeather(
-            @Valid @RequestBody TravelItineraryDto itinerary) {
+    /**
+     * Get weather comparison between multiple destinations for a specific date
+     * @param destinations List of destinations to compare
+     * @param date Date for comparison
+     * @return Weather comparison data
+     */
+    @GetMapping("/compare")
+    public ResponseEntity<Map<String, WeatherResponse>> compareDestinations(
+            @RequestParam List<String> destinations,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
-        List<ItineraryWeatherDto> itineraryWeather = weatherService.getItineraryWeather(itinerary);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Itinerary weather retrieved successfully", itineraryWeather));
+        if (destinations.size() < 2) {
+            throw new InvalidRequestException("At least two destinations are required for comparison");
+        }
+
+        Map<String, WeatherResponse> comparison = travelPlannerService.compareDestinationsWeather(
+                destinations, date);
+
+        return ResponseEntity.ok(comparison);
     }
 
-    @GetMapping("/seasonal-recommendations/{cityName}")
-    public ResponseEntity<ApiResponse<SeasonalRecommendationsDto>> getSeasonalRecommendations(
-            @PathVariable String cityName) {
+    /**
+     * Get travel recommendations based on weather conditions
+     * @param destination Destination city
+     * @param startDate Start date of travel
+     * @param endDate End date of travel
+     * @param activityType Type of activities planned (outdoor, indoor, mixed)
+     * @return Travel recommendations
+     */
+    @GetMapping("/recommendations")
+    public ResponseEntity<TravelPlannerDto> getTravelRecommendations(
+            @RequestParam String destination,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "mixed") String activityType) {
 
-        SeasonalRecommendationsDto seasonalRecs = weatherService.getSeasonalRecommendations(cityName);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Seasonal recommendations retrieved successfully", seasonalRecs));
+        TravelPlannerDto recommendations = travelPlannerService.getTravelRecommendations(
+                destination, startDate, endDate, activityType);
+
+        return ResponseEntity.ok(recommendations);
     }
 
-    @PostMapping("/packing-suggestions")
-    public ResponseEntity<ApiResponse<PackingSuggestionsDto>> getPackingSuggestions(
-            @Valid @RequestBody PackingRequestDto request) {
+    /**
+     * Get best travel dates for a destination within a date range
+     * @param destination Destination city
+     * @param startDate Start of date range to consider
+     * @param endDate End of date range to consider
+     * @param duration Duration of trip in days
+     * @return Best travel dates with weather scores
+     */
+    @GetMapping("/best-dates")
+    public ResponseEntity<List<TravelPlannerDto>> getBestTravelDates(
+            @RequestParam String destination,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "3") int duration) {
 
-        PackingSuggestionsDto suggestions = weatherService.getPackingSuggestions(
-                request.getDestination(),
-                request.getTravelDates(),
-                request.getActivities()
-        );
-        return ResponseEntity.ok(new ApiResponse<>(true, "Packing suggestions retrieved successfully", suggestions));
+        if (duration < 1 || duration > 30) {
+            throw new InvalidRequestException("Trip duration must be between 1 and 30 days");
+        }
+
+        List<TravelPlannerDto> bestDates = travelPlannerService.findBestTravelDates(
+                destination, startDate, endDate, duration);
+
+        return ResponseEntity.ok(bestDates);
     }
 
-    // Inner DTOs for request bodies
-    public static class TravelPlanDto {
-        @Valid
-        @NotEmpty(message = "Destinations cannot be empty")
-        private List<TravelDestinationDto> destinations;
+    /**
+     * Get weather alerts and warnings for travel destinations
+     * @param destinations List of destinations to check
+     * @param startDate Start date for alert checking
+     * @param endDate End date for alert checking
+     * @return Travel alerts and warnings
+     */
+    @GetMapping("/alerts")
+    public ResponseEntity<Map<String, List<String>>> getTravelAlerts(
+            @RequestParam List<String> destinations,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
-        @Valid
-        private TravelDatesDto travelDates;
+        Map<String, List<String>> alerts = travelPlannerService.getTravelAlerts(
+                destinations, startDate, endDate);
 
-        private TravelPreferencesDto preferences;
-
-        // Getters and setters
-        public List<TravelDestinationDto> getDestinations() { return destinations; }
-        public void setDestinations(List<TravelDestinationDto> destinations) { this.destinations = destinations; }
-        public TravelDatesDto getTravelDates() { return travelDates; }
-        public void setTravelDates(TravelDatesDto travelDates) { this.travelDates = travelDates; }
-        public TravelPreferencesDto getPreferences() { return preferences; }
-        public void setPreferences(TravelPreferencesDto preferences) { this.preferences = preferences; }
+        return ResponseEntity.ok(alerts);
     }
 
-    public static class TravelComparisonRequestDto {
-        @Valid
-        @NotEmpty(message = "Destinations cannot be empty")
-        private List<TravelDestinationDto> destinations;
+    /**
+     * Get packing suggestions based on weather forecast
+     * @param destination Destination city
+     * @param startDate Start date of travel
+     * @param endDate End date of travel
+     * @param tripType Type of trip (business, leisure, adventure)
+     * @return Packing recommendations
+     */
+    @GetMapping("/packing-suggestions")
+    public ResponseEntity<Map<String, List<String>>> getPackingSuggestions(
+            @RequestParam String destination,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "leisure") String tripType) {
 
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-        private LocalDate date;
+        Map<String, List<String>> packingSuggestions = travelPlannerService.getPackingSuggestions(
+                destination, startDate, endDate, tripType);
 
-        // Getters and setters
-        public List<TravelDestinationDto> getDestinations() { return destinations; }
-        public void setDestinations(List<TravelDestinationDto> destinations) { this.destinations = destinations; }
-        public LocalDate getDate() { return date; }
-        public void setDate(LocalDate date) { this.date = date; }
+        return ResponseEntity.ok(packingSuggestions);
     }
 
-    public static class TravelItineraryDto {
-        @Valid
-        @NotEmpty(message = "Itinerary items cannot be empty")
-        private List<ItineraryItemDto> items;
-
-        // Getters and setters
-        public List<ItineraryItemDto> getItems() { return items; }
-        public void setItems(List<ItineraryItemDto> items) { this.items = items; }
+    /**
+     * Get saved travel plans for a user
+     * @param userId User ID
+     * @return List of saved travel plans
+     */
+    @GetMapping("/saved-plans/{userId}")
+    public ResponseEntity<List<TravelPlannerDto>> getSavedTravelPlans(@PathVariable String userId) {
+        List<TravelPlannerDto> savedPlans = travelPlannerService.getSavedTravelPlans(userId);
+        return ResponseEntity.ok(savedPlans);
     }
 
-    public static class PackingRequestDto {
-        @Valid
-        private TravelDestinationDto destination;
+    /**
+     * Save a travel plan for future reference
+     * @param userId User ID
+     * @param travelPlan Travel plan to save
+     * @return Saved travel plan with ID
+     */
+    @PostMapping("/save-plan/{userId}")
+    public ResponseEntity<TravelPlannerDto> saveTravelPlan(
+            @PathVariable String userId,
+            @Valid @RequestBody TravelPlannerDto travelPlan) {
 
-        @Valid
-        private TravelDatesDto travelDates;
+        TravelPlannerDto savedPlan = travelPlannerService.saveTravelPlan(userId, travelPlan);
+        return ResponseEntity.ok(savedPlan);
+    }
 
-        private List<String> activities;
+    /**
+     * Delete a saved travel plan
+     * @param userId User ID
+     * @param planId Travel plan ID
+     * @return Success response
+     */
+    @DeleteMapping("/saved-plans/{userId}/{planId}")
+    public ResponseEntity<Map<String, String>> deleteSavedTravelPlan(
+            @PathVariable String userId,
+            @PathVariable String planId) {
 
-        // Getters and setters
-        public TravelDestinationDto getDestination() { return destination; }
-        public void setDestination(TravelDestinationDto destination) { this.destination = destination; }
-        public TravelDatesDto getTravelDates() { return travelDates; }
-        public void setTravelDates(TravelDatesDto travelDates) { this.travelDates = travelDates; }
-        public List<String> getActivities() { return activities; }
-        public void setActivities(List<String> activities) { this.activities = activities; }
+        travelPlannerService.deleteSavedTravelPlan(userId, planId);
+        return ResponseEntity.ok(Map.of("message", "Travel plan deleted successfully"));
     }
 }
