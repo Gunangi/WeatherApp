@@ -2,7 +2,6 @@ package com.example.weatherapp.controller;
 
 import com.example.weatherapp.model.HistoricalWeather;
 import com.example.weatherapp.service.HistoricalWeatherService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,8 +16,12 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class HistoricalController {
 
-    @Autowired
-    private HistoricalWeatherService historicalWeatherService;
+    private final HistoricalWeatherService historicalWeatherService;
+
+    // Use constructor injection instead of @Autowired on the field
+    public HistoricalController(HistoricalWeatherService historicalWeatherService) {
+        this.historicalWeatherService = historicalWeatherService;
+    }
 
     /**
      * Get historical weather data for a specific date
@@ -251,7 +254,7 @@ public class HistoricalController {
             String csvData = historicalWeatherService.exportToCsv(lat, lon, startDate, endDate);
             return ResponseEntity.ok()
                     .header("Content-Type", "text/csv")
-                    .header("Content-Disposition", "attachment; filename=weather_data.csv")
+                    .header("Content-Disposition", "attachment; filename=historical_weather_data.csv")
                     .body(csvData);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
