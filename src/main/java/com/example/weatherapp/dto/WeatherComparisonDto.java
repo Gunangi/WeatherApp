@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -16,8 +17,10 @@ import java.util.stream.Collectors;
  * Data Transfer Object for weather comparison between multiple cities
  * Used for displaying comparative weather information across different locations
  */
+@Getter
 public class WeatherComparisonDto {
 
+    // Main class getters and setters
     @JsonProperty("id")
     private String id;
 
@@ -281,35 +284,25 @@ public class WeatherComparisonDto {
         CURRENT, FORECAST, HISTORICAL
     }
 
-    // Main class getters and setters
-    public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
-    public List<CityWeatherComparison> getLocations() { return locations; }
     public void setLocations(List<CityWeatherComparison> locations) {
         this.locations = locations;
         generateSummary();
     }
 
-    public ComparisonType getComparisonType() { return comparisonType; }
     public void setComparisonType(ComparisonType comparisonType) { this.comparisonType = comparisonType; }
 
-    public LocalDateTime getComparedAt() { return comparedAt; }
     public void setComparedAt(LocalDateTime comparedAt) { this.comparedAt = comparedAt; }
 
-    public ComparisonSummary getSummary() { return summary; }
     public void setSummary(ComparisonSummary summary) { this.summary = summary; }
 
-    public List<String> getRecommendations() { return recommendations; }
     public void setRecommendations(List<String> recommendations) { this.recommendations = recommendations; }
 
-    public String getTemperatureUnit() { return temperatureUnit; }
     public void setTemperatureUnit(String temperatureUnit) { this.temperatureUnit = temperatureUnit; }
 
-    public String getWindSpeedUnit() { return windSpeedUnit; }
     public void setWindSpeedUnit(String windSpeedUnit) { this.windSpeedUnit = windSpeedUnit; }
 
-    public String getPressureUnit() { return pressureUnit; }
     public void setPressureUnit(String pressureUnit) { this.pressureUnit = pressureUnit; }
 
     // Utility methods
