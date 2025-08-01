@@ -1,11 +1,11 @@
-package com.weatherapp.controller;
+package com.example.weatherapp.controller;
 
-import com.weatherapp.dto.WeatherResponse;
-import com.weatherapp.dto.WeatherComparisonDto;
-import com.weatherapp.service.WeatherService;
-import com.weatherapp.service.WeatherComparisonService;
-import com.weatherapp.exception.WeatherServiceException;
-import com.weatherapp.exception.LocationNotFoundException;
+import com.example.weatherapp.dto.WeatherResponse;
+import com.example.weatherapp.dto.WeatherComparisonDto;
+import com.example.weatherapp.service.WeatherService;
+import com.example.weatherapp.service.WeatherComparisonService;
+import com.example.weatherapp.exception.WeatherServiceException;
+import com.example.weatherapp.exception.LocationNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
