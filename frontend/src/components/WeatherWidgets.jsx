@@ -1,428 +1,358 @@
-import React, { useState, useEffect } from 'react';
-import { Grid, Edit3, Save, X, Plus, Move, Thermometer, Droplets, Wind, Eye, Sun, Gauge } from 'lucide-react';
+import React, { useState, useEffect, useContext } from 'react';
+import { WeatherContext } from '../context/WeatherContext';
+import { ThemeContext } from '../context/ThemeContext';
+import { UserContext } from '../context/UserContext';
+import ActivitySuggestions from './ActivitySuggestions';
+import AirQuality from './AirQuality';
+import ClothingSuggestions from './ClothingSuggestions';
+import ForecastCards from './ForecastCards';
+import './WeatherWidgets.css';
 
 const WeatherWidgets = () => {
+    const { weatherData, forecast, airQuality, loading } = useContext(WeatherContext);
+    const { theme } = useContext(ThemeContext);
+    const { userPreferences } = useContext(UserContext);
+
     const [widgets, setWidgets] = useState([
-        { id: 1, type: 'temperature', position: { x: 0, y: 0 }, size: 'small', enabled: true },
-        { id: 2, type: 'humidity', position: { x: 1, y: 0 }, size: 'small', enabled: true },
-        { id: 3, type: 'forecast', position: { x: 0, y: 1 }, size: 'large', enabled: true }
+        { id: 'current-weather', name: 'Current Weather', enabled: true, position: 0 },
+        { id: 'forecast', name: '5-Day Forecast', enabled: true, position: 1 },
+        { id: 'metrics', name: 'Weather Metrics', enabled: true, position: 2 },
+        { id: 'air-quality', name: 'Air Quality', enabled: true, position: 3 },
+        { id: 'uv-index', name: 'UV Index', enabled: true, position: 4 },
+        { id: 'sun-times', name: 'Sunrise/Sunset', enabled: true, position: 5 },
+        { id: 'hourly', name: 'Hourly Forecast', enabled: true, position: 6 },
+        { id: 'clothing', name: 'Clothing Suggestions', enabled: false, position: 7 },
+        { id: 'activities', name: 'Activity Recommendations', enabled: false, position: 8 }
     ]);
 
-    const [editMode, setEditMode] = useState(false);
-    const [weatherData, setWeatherData] = useState(null);
-    const [forecastData, setForecastData] = useState(null);
-    const [draggedWidget, setDraggedWidget] = useState(null);
-
-    const widgetTypes = {
-        temperature: {
-            name: 'Temperature',
-            icon: Thermometer,
-            color: 'bg-orange-500',
-            sizes: ['small', 'medium']
-        },
-        humidity: {
-            name: 'Humidity',
-            icon: Droplets,
-            color: 'bg-blue-500',
-            sizes: ['small', 'medium']
-        },
-        wind: {
-            name: 'Wind Speed',
-            icon: Wind,
-            color: 'bg-green-500',
-            sizes: ['small', 'medium']
-        },
-        visibility: {
-            name: 'Visibility',
-            icon: Eye,
-            color: 'bg-purple-500',
-            sizes: ['small', 'medium']
-        },
-        uv: {
-            name: 'UV Index',
-            icon: Sun,
-            color: 'bg-yellow-500',
-            sizes: ['small', 'medium']
-        },
-        pressure: {
-            name: 'Pressure',
-            icon: Gauge,
-            color: 'bg-indigo-500',
-            sizes: ['small', 'medium']
-        },
-        forecast: {
-            name: '5-Day ForecastCards',
-            icon: Grid,
-            color: 'bg-gray-500',
-            sizes: ['large']
-        }
-    };
+    const [editingWidget, setEditingWidget] = useState(null);
 
     useEffect(() => {
-        fetchWeatherData();
-    }, []);
-
-    const fetchWeatherData = async () => {
-        try {
-            // Mock data - replace with actual API calls
-            const currentResponse = await fetch(
-                `https://api.openweathermap.org/data/2.5/weather?q=Delhi&appid=${process.env.REACT_APP_OPENWEATHER_API_KEY}&units=metric`
-            );
-            const currentData = await currentResponse.json();
-            setWeatherData(currentData);
-
-            const forecastResponse = await fetch(
-                `https://api.openweathermap.org/data/2.5/forecast?q=Delhi&appid=${process.env.REACT_APP_OPENWEATHER_API_KEY}&units=metric`
-            );
-            const forecastData = await forecastResponse.json();
-            setForecastData(forecastData);
-        } catch (error) {
-            console.error('Error fetching weather data:', error);
-            // Fallback mock data
-            setWeatherData({
-                main: { temp: 25, humidity: 60, pressure: 1013 },
-                wind: { speed: 3.5 },
-                visibility: 8000,
-                weather: [{ main: 'Clear', description: 'clear sky' }]
-            });
-            setForecastData({
-                list: Array(5).fill().map((_, i) => ({
-                    dt: Date.now() + i * 24 * 60 * 60 * 1000,
-                    main: { temp: 25 + Math.random() * 10 },
-                    weather: [{ main: 'Clear', icon: '01d' }]
-                }))
-            });
+        // Load user's widget preferences
+        if (userPreferences?.widgets) {
+            setWidgets(userPreferences.widgets);
         }
+    }, [userPreferences]);
+
+    const toggleWidget = (widgetId) => {
+        setWidgets(prev =>
+            prev.map(widget =>
+                widget.id === widgetId
+                    ? { ...widget, enabled: !widget.enabled }
+                    : widget
+            )
+        );
     };
 
-    const addWidget = (type) => {
-        const newWidget = {
-            id: Date.now(),
-            type,
-            position: { x: Math.floor(Math.random() * 3), y: Math.floor(Math.random() * 3) },
-            size: widgetTypes[type].sizes[0],
-            enabled: true
+    const moveWidget = (widgetId, direction) => {
+        setWidgets(prev => {
+            const currentIndex = prev.findIndex(w => w.id === widgetId);
+            const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+            if (newIndex < 0 || newIndex >= prev.length) return prev;
+
+            const newWidgets = [...prev];
+            [newWidgets[currentIndex], newWidgets[newIndex]] = [newWidgets[newIndex], newWidgets[currentIndex]];
+
+            return newWidgets.map((widget, index) => ({ ...widget, position: index }));
+        });
+    };
+
+    const CurrentWeatherWidget = () => (
+        <div className="widget current-weather-widget">
+            <div className="widget-controls">
+                <button className="control-btn" onClick={() => setEditingWidget('current-weather')}>
+                    ⚙️
+                </button>
+            </div>
+            <div className="current-weather-content">
+                <div className="temperature-display">
+                    <span className="temperature">{weatherData?.temperature || '--'}°</span>
+                    <span className="unit">{userPreferences?.temperatureUnit || 'C'}</span>
+                </div>
+                <div className="weather-info">
+                    <div className="location">{weatherData?.location || 'Loading...'}</div>
+                    <div className="condition">{weatherData?.condition || 'Loading...'}</div>
+                    <div className="feels-like">
+                        Feels like {weatherData?.feelsLike || '--'}°{userPreferences?.temperatureUnit || 'C'}
+                    </div>
+                </div>
+                <div className="weather-icon-large">
+                    {getWeatherIcon(weatherData?.condition)}
+                </div>
+            </div>
+        </div>
+    );
+
+    const MetricsWidget = () => (
+        <div className="widget metrics-widget">
+            <div className="widget-controls">
+                <button className="control-btn" onClick={() => setEditingWidget('metrics')}>
+                    ⚙️
+                </button>
+            </div>
+            <div className="widget-header">
+                <h3 className="widget-title">Weather Metrics</h3>
+                <span className="widget-icon">📊</span>
+            </div>
+            <div className="metrics-grid">
+                <div className="metric-item">
+                    <div className="metric-value">{weatherData?.humidity || '--'}%</div>
+                    <div className="metric-label">Humidity</div>
+                </div>
+                <div className="metric-item">
+                    <div className="metric-value">{weatherData?.windSpeed || '--'}</div>
+                    <div className="metric-label">Wind (m/s)</div>
+                </div>
+                <div className="metric-item">
+                    <div className="metric-value">{weatherData?.pressure || '--'}</div>
+                    <div className="metric-label">Pressure (hPa)</div>
+                </div>
+                <div className="metric-item">
+                    <div className="metric-value">{weatherData?.visibility || '--'}</div>
+                    <div className="metric-label">Visibility (km)</div>
+                </div>
+            </div>
+        </div>
+    );
+
+    const UVIndexWidget = () => {
+        const getUVClass = (uv) => {
+            if (uv <= 2) return 'uv-low';
+            if (uv <= 5) return 'uv-moderate';
+            if (uv <= 7) return 'uv-high';
+            if (uv <= 10) return 'uv-very-high';
+            return 'uv-extreme';
         };
-        setWidgets([...widgets, newWidget]);
-    };
 
-    const removeWidget = (id) => {
-        setWidgets(widgets.filter(w => w.id !== id));
-    };
-
-    const toggleWidget = (id) => {
-        setWidgets(widgets.map(w =>
-            w.id === id ? { ...w, enabled: !w.enabled } : w
-        ));
-    };
-
-    const updateWidgetSize = (id, size) => {
-        setWidgets(widgets.map(w =>
-            w.id === id ? { ...w, size } : w
-        ));
-    };
-
-    const moveWidget = (id, newPosition) => {
-        setWidgets(widgets.map(w =>
-            w.id === id ? { ...w, position: newPosition } : w
-        ));
-    };
-
-    const handleDragStart = (e, widget) => {
-        if (!editMode) return;
-        setDraggedWidget(widget);
-        e.dataTransfer.effectAllowed = 'move';
-    };
-
-    const handleDragOver = (e) => {
-        e.preventDefault();
-    };
-
-    const handleDrop = (e, x, y) => {
-        e.preventDefault();
-        if (draggedWidget && editMode) {
-            moveWidget(draggedWidget.id, { x, y });
-            setDraggedWidget(null);
-        }
-    };
-
-    const renderWidget = (widget) => {
-        if (!widget.enabled) return null;
-
-        const WidgetIcon = widgetTypes[widget.type].icon;
-        const sizeClasses = {
-            small: 'col-span-1 row-span-1',
-            medium: 'col-span-2 row-span-1',
-            large: 'col-span-3 row-span-2'
-        };
-
-        const getWidgetContent = () => {
-            if (!weatherData) return <div className="animate-pulse">Loading...</div>;
-
-            switch (widget.type) {
-                case 'temperature':
-                    return (
-                        <div className="text-center">
-                            <div className="text-3xl font-bold text-white mb-1">
-                                {Math.round(weatherData.main.temp)}°C
-                            </div>
-                            <div className="text-white/80 text-sm">Temperature</div>
-                        </div>
-                    );
-
-                case 'humidity':
-                    return (
-                        <div className="text-center">
-                            <div className="text-3xl font-bold text-white mb-1">
-                                {weatherData.main.humidity}%
-                            </div>
-                            <div className="text-white/80 text-sm">Humidity</div>
-                        </div>
-                    );
-
-                case 'wind':
-                    return (
-                        <div className="text-center">
-                            <div className="text-3xl font-bold text-white mb-1">
-                                {weatherData.wind.speed} m/s
-                            </div>
-                            <div className="text-white/80 text-sm">Wind Speed</div>
-                        </div>
-                    );
-
-                case 'visibility':
-                    return (
-                        <div className="text-center">
-                            <div className="text-3xl font-bold text-white mb-1">
-                                {(weatherData.visibility / 1000).toFixed(1)} km
-                            </div>
-                            <div className="text-white/80 text-sm">Visibility</div>
-                        </div>
-                    );
-
-                case 'uv':
-                    return (
-                        <div className="text-center">
-                            <div className="text-3xl font-bold text-white mb-1">
-                                {Math.floor(Math.random() * 11)} {/* Mock UV index */}
-                            </div>
-                            <div className="text-white/80 text-sm">UV Index</div>
-                        </div>
-                    );
-
-                case 'pressure':
-                    return (
-                        <div className="text-center">
-                            <div className="text-3xl font-bold text-white mb-1">
-                                {weatherData.main.pressure} hPa
-                            </div>
-                            <div className="text-white/80 text-sm">Pressure</div>
-                        </div>
-                    );
-
-                case 'forecast':
-                    return (
-                        <div className="h-full">
-                            <div className="text-white/80 text-sm mb-3">5-Day Forecast</div>
-                            <div className="space-y-2">
-                                {forecastData?.list.slice(0, 5).map((day, index) => (
-                                    <div key={index} className="flex items-center justify-between text-white">
-                    <span className="text-sm">
-                      {new Date(day.dt * 1000).toLocaleDateString('en', { weekday: 'short' })}
-                    </span>
-                                        <span className="text-sm font-medium">
-                      {Math.round(day.main.temp)}°C
-                    </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    );
-
-                default:
-                    return <div>Widget content</div>;
-            }
+        const getUVRecommendation = (uv) => {
+            if (uv <= 2) return 'No protection needed. Safe for outdoor activities.';
+            if (uv <= 5) return 'Some protection required. Wear sunscreen.';
+            if (uv <= 7) return 'Protection essential. Seek shade during midday.';
+            if (uv <= 10) return 'Extra protection needed. Avoid sun exposure.';
+            return 'Extreme risk. Stay indoors if possible.';
         };
 
         return (
-            <div
-                key={widget.id}
-                className={`${sizeClasses[widget.size]} ${widgetTypes[widget.type].color} rounded-xl p-4 text-white shadow-lg relative cursor-move transition-all hover:shadow-xl`}
-                draggable={editMode}
-                onDragStart={(e) => handleDragStart(e, widget)}
-                style={{
-                    gridColumn: `${widget.position.x + 1} / span ${widget.size === 'large' ? 3 : widget.size === 'medium' ? 2 : 1}`,
-                    gridRow: `${widget.position.y + 1} / span ${widget.size === 'large' ? 2 : 1}`
-                }}
-            >
-                {editMode && (
-                    <div className="absolute top-2 right-2 flex gap-1">
-                        {widgetTypes[widget.type].sizes.length > 1 && (
-                            <select
-                                value={widget.size}
-                                onChange={(e) => updateWidgetSize(widget.id, e.target.value)}
-                                className="text-xs bg-white/20 text-white border-none rounded px-1"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                {widgetTypes[widget.type].sizes.map(size => (
-                                    <option key={size} value={size} className="text-black">
-                                        {size.charAt(0).toUpperCase() + size.slice(1)}
-                                    </option>
-                                ))}
-                            </select>
-                        )}
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                removeWidget(widget.id);
-                            }}
-                            className="text-white/80 hover:text-white bg-red-500/50 rounded p-1"
-                        >
-                            <X className="w-3 h-3" />
-                        </button>
-                    </div>
-                )}
-
-                <div className="flex items-center gap-2 mb-2">
-                    <WidgetIcon className="w-5 h-5" />
-                    {!editMode && widget.size !== 'small' && (
-                        <span className="font-medium text-sm">{widgetTypes[widget.type].name}</span>
-                    )}
+            <div className="widget uv-widget">
+                <div className="widget-controls">
+                    <button className="control-btn" onClick={() => setEditingWidget('uv-index')}>
+                        ⚙️
+                    </button>
                 </div>
-
-                {getWidgetContent()}
+                <div className="widget-header">
+                    <h3 className="widget-title">UV Index</h3>
+                    <span className="widget-icon">☀️</span>
+                </div>
+                <div className="uv-gauge">
+                    <div className={`uv-value ${getUVClass(weatherData?.uvIndex)}`}>
+                        {weatherData?.uvIndex || '--'}
+                    </div>
+                    <div className="uv-label">
+                        {weatherData?.uvIndex ? getUVLabel(weatherData.uvIndex) : 'Loading...'}
+                    </div>
+                </div>
+                <div className="uv-recommendation">
+                    {weatherData?.uvIndex ? getUVRecommendation(weatherData.uvIndex) : 'Loading recommendations...'}
+                </div>
             </div>
         );
     };
 
-    return (
-        <div className="max-w-7xl mx-auto p-6">
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-                        Weather Dashboard
-                    </h1>
-                    <p className="text-gray-600 dark:text-gray-300">
-                        Customize your weather widgets for a personalized experience
-                    </p>
+    const SunTimesWidget = () => (
+        <div className="widget sun-times-widget">
+            <div className="widget-controls">
+                <button className="control-btn" onClick={() => setEditingWidget('sun-times')}>
+                    ⚙️
+                </button>
+            </div>
+            <div className="widget-header">
+                <h3 className="widget-title">Sun Times</h3>
+                <span className="widget-icon">🌅</span>
+            </div>
+            <div className="sun-times">
+                <div className="sun-time">
+                    <div className="sun-icon">🌅</div>
+                    <div className="sun-time-value">{weatherData?.sunrise || '--:--'}</div>
+                    <div className="sun-time-label">Sunrise</div>
                 </div>
-
-                <div className="flex gap-4">
-                    {editMode && (
-                        <div className="flex gap-2">
-                            <select
-                                onChange={(e) => e.target.value && addWidget(e.target.value)}
-                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                                defaultValue=""
-                            >
-                                <option value="">Add Widget</option>
-                                {Object.entries(widgetTypes).map(([key, type]) => (
-                                    <option key={key} value={key}>{type.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
-
-                    <button
-                        onClick={() => setEditMode(!editMode)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                            editMode
-                                ? 'bg-green-500 hover:bg-green-600 text-white'
-                                : 'bg-blue-500 hover:bg-blue-600 text-white'
-                        }`}
-                    >
-                        {editMode ? (
-                            <>
-                                <Save className="w-4 h-4" />
-                                Save Layout
-                            </>
-                        ) : (
-                            <>
-                                <Edit3 className="w-4 h-4" />
-                                Edit Layout
-                            </>
-                        )}
-                    </button>
+                <div className="sun-time">
+                    <div className="sun-icon">🌇</div>
+                    <div className="sun-time-value">{weatherData?.sunset || '--:--'}</div>
+                    <div className="sun-time-label">Sunset</div>
                 </div>
             </div>
+        </div>
+    );
 
-            {/* Widget Grid */}
-            <div
-                className="grid grid-cols-4 grid-rows-4 gap-4 min-h-[600px]"
-                onDragOver={handleDragOver}
-            >
-                {/* Grid Cells for Drop Zones (only visible in edit mode) */}
-                {editMode && Array(16).fill().map((_, index) => {
-                    const x = index % 4;
-                    const y = Math.floor(index / 4);
-                    return (
-                        <div
-                            key={index}
-                            className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg opacity-50"
-                            onDrop={(e) => handleDrop(e, x, y)}
-                            style={{
-                                gridColumn: x + 1,
-                                gridRow: y + 1
-                            }}
-                        />
-                    );
-                })}
-
-                {/* Render Widgets */}
-                {widgets.map(renderWidget)}
+    const HourlyForecastWidget = () => (
+        <div className="widget hourly-widget">
+            <div className="widget-controls">
+                <button className="control-btn" onClick={() => setEditingWidget('hourly')}>
+                    ⚙️
+                </button>
             </div>
-
-            {/* Widget Controls Panel (Edit Mode) */}
-            {editMode && (
-                <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-                        Widget Controls
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {widgets.map(widget => {
-                            const WidgetIcon = widgetTypes[widget.type].icon;
-                            return (
-                                <div key={widget.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 ${widgetTypes[widget.type].color} rounded-lg`}>
-                                            <WidgetIcon className="w-4 h-4 text-white" />
-                                        </div>
-                                        <span className="font-medium text-gray-800 dark:text-white">
-                      {widgetTypes[widget.type].name}
-                    </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => toggleWidget(widget.id)}
-                                            className={`px-2 py-1 rounded text-xs font-medium ${
-                                                widget.enabled
-                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-300'
-                                            }`}
-                                        >
-                                            {widget.enabled ? 'On' : 'Off'}
-                                        </button>
-                                        <button
-                                            onClick={() => removeWidget(widget.id)}
-                                            className="text-red-500 hover:text-red-700 p-1"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
+            <div className="widget-header">
+                <h3 className="widget-title">24-Hour Forecast</h3>
+                <span className="widget-icon">🕐</span>
+            </div>
+            <div className="hourly-scroll">
+                {forecast?.hourly?.slice(0, 12).map((hour, index) => (
+                    <div key={index} className="hourly-item">
+                        <div className="hourly-time">{hour.time}</div>
+                        <div className="hourly-icon">{getWeatherIcon(hour.condition)}</div>
+                        <div className="hourly-temp">{hour.temperature}°</div>
+                        <div className="hourly-precipitation">{hour.precipitation}%</div>
                     </div>
-                </div>
-            )}
+                )) || Array.from({ length: 6 }, (_, i) => (
+                    <div key={i} className="hourly-item">
+                        <div className="hourly-time">--:--</div>
+                        <div className="hourly-icon">--</div>
+                        <div className="hourly-temp">--°</div>
+                        <div className="hourly-precipitation">--%</div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 
-            {/* Help Text */}
-            {editMode && (
-                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <p className="text-blue-800 dark:text-blue-300 text-sm">
-                        <strong>Edit Mode:</strong> Drag widgets to reposition them, use the dropdown to add new widgets,
-                        adjust sizes, and toggle widgets on/off. Click "Save Layout" when you're done.
-                    </p>
+    const getWeatherIcon = (condition) => {
+        const iconMap = {
+            'clear': '☀️',
+            'sunny': '☀️',
+            'partly cloudy': '⛅',
+            'cloudy': '☁️',
+            'overcast': '☁️',
+            'broken clouds': '☁️',
+            'rain': '🌧️',
+            'light rain': '🌦️',
+            'heavy rain': '🌧️',
+            'thunderstorm': '⛈️',
+            'snow': '❄️',
+            'fog': '🌫️',
+            'mist': '🌫️'
+        };
+
+        return iconMap[condition?.toLowerCase()] || '☁️';
+    };
+
+    const getUVLabel = (uv) => {
+        if (uv <= 2) return 'Low';
+        if (uv <= 5) return 'Moderate';
+        if (uv <= 7) return 'High';
+        if (uv <= 10) return 'Very High';
+        return 'Extreme';
+    };
+
+    const enabledWidgets = widgets.filter(w => w.enabled).sort((a, b) => a.position - b.position);
+
+    if (loading) {
+        return (
+            <div className="widgets-loading">
+                <div className="loading-spinner"></div>
+                <p>Loading weather widgets...</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`weather-widgets ${theme}`}>
+            <div className="widgets-header">
+                <h2 className="widgets-title">Weather Dashboard</h2>
+                <button
+                    className="customize-btn"
+                    onClick={() => setEditingWidget('layout')}
+                >
+                    Customize Widgets
+                </button>
+            </div>
+
+            <div className="widgets-grid">
+                {enabledWidgets.map(widget => {
+                    switch (widget.id) {
+                        case 'current-weather':
+                            return <CurrentWeatherWidget key={widget.id} />;
+                        case 'forecast':
+                            return <ForecastCards key={widget.id} />;
+                        case 'metrics':
+                            return <MetricsWidget key={widget.id} />;
+                        case 'air-quality':
+                            return <AirQuality key={widget.id} />;
+                        case 'uv-index':
+                            return <UVIndexWidget key={widget.id} />;
+                        case 'sun-times':
+                            return <SunTimesWidget key={widget.id} />;
+                        case 'hourly':
+                            return <HourlyForecastWidget key={widget.id} />;
+                        case 'clothing':
+                            return <ClothingSuggestions key={widget.id} />;
+                        case 'activities':
+                            return <ActivitySuggestions key={widget.id} />;
+                        default:
+                            return null;
+                    }
+                })}
+            </div>
+
+            {editingWidget === 'layout' && (
+                <div className="widget-customizer-modal">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h3>Customize Widgets</h3>
+                            <button
+                                className="close-btn"
+                                onClick={() => setEditingWidget(null)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="widget-list">
+                            {widgets.map(widget => (
+                                <div key={widget.id} className="widget-item">
+                                    <div className="widget-info">
+                                        <span className="widget-name">{widget.name}</span>
+                                        <label className="toggle-switch">
+                                            <input
+                                                type="checkbox"
+                                                checked={widget.enabled}
+                                                onChange={() => toggleWidget(widget.id)}
+                                            />
+                                            <span className="slider"></span>
+                                        </label>
+                                    </div>
+                                    {widget.enabled && (
+                                        <div className="widget-controls">
+                                            <button
+                                                className="move-btn"
+                                                onClick={() => moveWidget(widget.id, 'up')}
+                                                disabled={widget.position === 0}
+                                            >
+                                                ↑
+                                            </button>
+                                            <button
+                                                className="move-btn"
+                                                onClick={() => moveWidget(widget.id, 'down')}
+                                                disabled={widget.position === widgets.length - 1}
+                                            >
+                                                ↓
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="modal-actions">
+                            <button
+                                className="save-btn"
+                                onClick={() => {
+                                    // Save to user preferences
+                                    setEditingWidget(null);
+                                }}
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
