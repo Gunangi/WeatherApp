@@ -44,7 +44,7 @@ import './App.css';
 // import { unitConversions } from './utils/unitConversions';
 // import { widgetUtils } from './utils/widgetUtils';
 
-const IntegratedWeatherApp = () => {
+const App = () => {
     // Main state management
     const [weather, setWeather] = useState(null);
     const [forecast, setForecast] = useState(null);
@@ -600,4 +600,4 @@ const IntegratedWeatherApp = () => {
     );
 };
 
-export default IntegratedWeatherApp;
+export default App;
