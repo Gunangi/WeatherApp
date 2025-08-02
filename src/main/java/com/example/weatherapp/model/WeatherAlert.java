@@ -1,3 +1,4 @@
+// src/main/java/com/example/weatherapp/model/WeatherAlert.java
 package com.example.weatherapp.model;
 
 import org.springframework.data.annotation.Id;
@@ -13,6 +14,12 @@ public class WeatherAlert {
     private String city;
     private String event;
     private String description;
+    private String severity; // LOW, MODERATE, HIGH, EXTREME
     private Instant startTime;
     private Instant endTime;
+    private boolean active;
+    private String alertType; // TEMPERATURE, WIND, PRECIPITATION, UV, AIR_QUALITY, VISIBILITY
+    private String source; // SYSTEM, API, MANUAL
+    private Instant createdAt;
+    private Instant updatedAt;
 }
