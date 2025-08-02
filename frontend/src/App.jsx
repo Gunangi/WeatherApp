@@ -5,6 +5,7 @@ import {
     Heart, Star, Bell, TrendingUp, Umbrella, Shirt, Calendar, Share2,
     Menu, X, Grid, List, Map, BarChart3
 } from 'lucide-react';
+import './App.css';
 
 // Import all your components (simulated for demo)
 // In your actual app, these would be real imports:
