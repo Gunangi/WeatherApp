@@ -13,6 +13,7 @@ import com.example.weatherapp.repository.WidgetConfigRepository;
 import com.example.weatherapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -31,6 +32,9 @@ public class WidgetService {
     private final AirQualityService airQualityService;
     private final ForecastService forecastService;
 
+    @Value("${weather.app.max-widgets-per-user:20}")
+    private int maxWidgetsPerUser;
+
     public List<WidgetConfigDto> getUserWidgets(String userId) {
         validateUser(userId);
 
@@ -43,9 +47,38 @@ public class WidgetService {
     public WidgetConfigDto createWidget(String userId, WidgetConfigDto widgetConfigDto) {
         validateUser(userId);
 
+        // Check widget limit
+        long currentCount = widgetConfigRepository.countByUserId(userId);
+        if (currentCount >= maxWidgetsPerUser) {
+            throw new InvalidRequestException("Maximum number of widgets (" + maxWidgetsPerUser + ") reached");
+        }
+
         WidgetConfig widget = new WidgetConfig();
         widget.setUserId(userId);
         widget.setWidgetType(widgetConfigDto.getWidgetType());
+        widget.setTitle(widgetConfigDto.getTitle());
+        widget.setCity(widgetConfigDto.getCity());
+        widget.setSize(widgetConfigDto.getSize());
+        widget.setPosition(widgetConfigDto.getPosition());
+        widget.setSettings(widgetConfigDto.getSettings());
+        widget.setRefreshInterval(widgetConfigDto.getRefreshInterval());
+        widget.setOrderIndex(getNextOrderIndex(userId));
+        widget.setEnabled(true);
+        widget.setCreatedAt(Instant.now());
+        widget.setUpdatedAt(Instant.now());
+
+        WidgetConfig saved = widgetConfigRepository.save(widget);
+        log.info("Created widget for user {}: {} - {}", userId, saved.getWidgetType(), saved.getTitle());
+
+        return mapToDto(saved);
+    }
+
+    public WidgetConfigDto updateWidget(String userId, String widgetId, WidgetConfigDto widgetConfigDto) {
+        validateUser(userId);
+
+        WidgetConfig widget = widgetConfigRepository.findByIdAndUserId(widgetId, userId)
+                .orElseThrow(() -> new InvalidRequestException("Widget not found"));
+
         widget.setTitle(widgetConfigDto.getTitle());
         widget.setCity(widgetConfigDto.getCity());
         widget.setSize(widgetConfigDto.getSize());
@@ -97,6 +130,7 @@ public class WidgetService {
         data.setTitle(widget.getTitle());
         data.setCity(widget.getCity());
         data.setLastUpdated(Instant.now());
+        data.setStatus("SUCCESS");
 
         try {
             switch (widget.getWidgetType().toUpperCase()) {
@@ -107,7 +141,9 @@ public class WidgetService {
                             "description", weather.getWeatherDescription(),
                             "humidity", weather.getHumidity(),
                             "windSpeed", weather.getWindSpeed(),
-                            "icon", weather.getWeatherIcon()
+                            "icon", weather.getWeatherIcon() != null ? weather.getWeatherIcon() : "",
+                            "feelsLike", weather.getFeelsLike(),
+                            "pressure", weather.getPressure()
                     ));
                     break;
 
@@ -116,7 +152,8 @@ public class WidgetService {
                     data.setData(Map.of(
                             "current", tempWeather.getTemperature(),
                             "feelsLike", tempWeather.getFeelsLike(),
-                            "unit", "°C"
+                            "unit", "°C",
+                            "main", tempWeather.getWeatherMain() != null ? tempWeather.getWeatherMain() : ""
                     ));
                     break;
 
@@ -126,7 +163,10 @@ public class WidgetService {
                             "aqi", airQuality.getAqi(),
                             "healthImpact", airQuality.getHealthImpact(),
                             "pm25", airQuality.getPm2_5(),
-                            "pm10", airQuality.getPm10()
+                            "pm10", airQuality.getPm10(),
+                            "co", airQuality.getCo(),
+                            "no2", airQuality.getNo2(),
+                            "o3", airQuality.getO3()
                     ));
                     break;
 
@@ -140,10 +180,11 @@ public class WidgetService {
 
                 case "UV_INDEX":
                     WeatherResponse uvWeather = weatherService.getWeatherForCity(widget.getCity(), widget.getUserId());
+                    double uvIndex = uvWeather.getUvIndex() != 0 ? uvWeather.getUvIndex() : 0.0;
                     data.setData(Map.of(
-                            "uvIndex", uvWeather.getUvIndex(),
-                            "uvIndexText", uvWeather.getUvIndexText(),
-                            "recommendation", getUvRecommendation(uvWeather.getUvIndex())
+                            "uvIndex", uvIndex,
+                            "uvIndexText", uvWeather.getUvIndexText() != null ? uvWeather.getUvIndexText() : getUvIndexText(uvIndex),
+                            "recommendation", getUvRecommendation(uvIndex)
                     ));
                     break;
 
@@ -151,8 +192,9 @@ public class WidgetService {
                     WeatherResponse windWeather = weatherService.getWeatherForCity(widget.getCity(), widget.getUserId());
                     data.setData(Map.of(
                             "speed", windWeather.getWindSpeed(),
-                            "direction", windWeather.getWindDirection(),
-                            "directionText", windWeather.getWindDirectionText()
+                            "direction", windWeather.getWindDirection() != 0 ? windWeather.getWindDirection() : 0.0,
+                            "directionText", windWeather.getWindDirectionText() != null ? windWeather.getWindDirectionText() : "N/A",
+                            "unit", "m/s"
                     ));
                     break;
 
@@ -160,7 +202,7 @@ public class WidgetService {
                     WeatherResponse humidityWeather = weatherService.getWeatherForCity(widget.getCity(), widget.getUserId());
                     data.setData(Map.of(
                             "humidity", humidityWeather.getHumidity(),
-                            "dewPoint", humidityWeather.getDewPoint(),
+                            "dewPoint", humidityWeather.getDewPoint() != 0 ? humidityWeather.getDewPoint() : 0.0,
                             "comfort", getHumidityComfort(humidityWeather.getHumidity())
                     ));
                     break;
@@ -170,20 +212,60 @@ public class WidgetService {
                     data.setData(Map.of(
                             "sunrise", sunWeather.getSunrise(),
                             "sunset", sunWeather.getSunset(),
-                            "dayLength", calculateDayLength(sunWeather.getSunrise(), sunWeather.getSunset())
+                            "dayLength", calculateDayLength(sunWeather.getSunrise(), sunWeather.getSunset()),
+                            "localTime", sunWeather.getLocalTime() != null ? sunWeather.getLocalTime() : ""
+                    ));
+                    break;
+
+                case "PRESSURE":
+                    WeatherResponse pressureWeather = weatherService.getWeatherForCity(widget.getCity(), widget.getUserId());
+                    data.setData(Map.of(
+                            "pressure", pressureWeather.getPressure(),
+                            "unit", "hPa",
+                            "trend", getPressureTrend(pressureWeather.getPressure())
+                    ));
+                    break;
+
+                case "VISIBILITY":
+                    WeatherResponse visibilityWeather = weatherService.getWeatherForCity(widget.getCity(), widget.getUserId());
+                    data.setData(Map.of(
+                            "visibility", visibilityWeather.getVisibility(),
+                            "unit", "km",
+                            "quality", getVisibilityQuality(visibilityWeather.getVisibility())
+                    ));
+                    break;
+
+                case "CLOUD_COVER":
+                    WeatherResponse cloudWeather = weatherService.getWeatherForCity(widget.getCity(), widget.getUserId());
+                    data.setData(Map.of(
+                            "cloudCover", cloudWeather.getCloudCover(),
+                            "unit", "%",
+                            "description", getCloudDescription(cloudWeather.getCloudCover())
                     ));
                     break;
 
                 default:
                     log.warn("Unknown widget type: {}", widget.getWidgetType());
+                    data.setStatus("ERROR");
+                    data.setErrorMessage("Unknown widget type: " + widget.getWidgetType());
                     data.setData(Map.of("error", "Unknown widget type"));
             }
         } catch (Exception e) {
             log.error("Failed to fetch data for widget {}: {}", widget.getId(), e.getMessage());
+            data.setStatus("ERROR");
+            data.setErrorMessage(e.getMessage());
             data.setData(Map.of("error", "Failed to fetch data"));
         }
 
         return data;
+    }
+
+    private String getUvIndexText(double uvIndex) {
+        if (uvIndex <= 2) return "Low";
+        else if (uvIndex <= 5) return "Moderate";
+        else if (uvIndex <= 7) return "High";
+        else if (uvIndex <= 10) return "Very High";
+        else return "Extreme";
     }
 
     private String getUvRecommendation(double uvIndex) {
@@ -202,12 +284,65 @@ public class WidgetService {
         else return "Very humid";
     }
 
+    private String getPressureTrend(double pressure) {
+        if (pressure < 1000) return "Low (Rising weather)";
+        else if (pressure < 1020) return "Normal";
+        else return "High (Falling weather)";
+    }
+
+    private String getVisibilityQuality(double visibility) {
+        if (visibility < 1) return "Very poor";
+        else if (visibility < 5) return "Poor";
+        else if (visibility < 10) return "Moderate";
+        else if (visibility < 20) return "Good";
+        else return "Excellent";
+    }
+
+    private String getCloudDescription(int cloudCover) {
+        if (cloudCover == 0) return "Clear sky";
+        else if (cloudCover <= 25) return "Few clouds";
+        else if (cloudCover <= 50) return "Partly cloudy";
+        else if (cloudCover <= 75) return "Mostly cloudy";
+        else return "Overcast";
+    }
+
     private long calculateDayLength(java.time.Instant sunrise, java.time.Instant sunset) {
+        if (sunrise == null || sunset == null) return 0;
         return java.time.Duration.between(sunrise, sunset).toHours();
     }
 
     private int getNextOrderIndex(String userId) {
         return (int) widgetConfigRepository.countByUserId(userId) + 1;
+    }
+
+    public void reorderWidgets(String userId, List<String> widgetIds) {
+        validateUser(userId);
+
+        for (int i = 0; i < widgetIds.size(); i++) {
+            String widgetId = widgetIds.get(i);
+            int finalI = i;
+            widgetConfigRepository.findByIdAndUserId(widgetId, userId)
+                    .ifPresent(widget -> {
+                        widget.setOrderIndex(finalI + 1);
+                        widget.setUpdatedAt(Instant.now());
+                        widgetConfigRepository.save(widget);
+                    });
+        }
+
+        log.info("Reordered widgets for user {}", userId);
+    }
+
+    public void enableWidget(String userId, String widgetId, boolean enabled) {
+        validateUser(userId);
+
+        WidgetConfig widget = widgetConfigRepository.findByIdAndUserId(widgetId, userId)
+                .orElseThrow(() -> new InvalidRequestException("Widget not found"));
+
+        widget.setEnabled(enabled);
+        widget.setUpdatedAt(Instant.now());
+        widgetConfigRepository.save(widget);
+
+        log.info("Widget {} for user {} is now {}", widgetId, userId, enabled ? "enabled" : "disabled");
     }
 
     private void validateUser(String userId) {
@@ -233,27 +368,4 @@ public class WidgetService {
         dto.setUpdatedAt(widget.getUpdatedAt());
         return dto;
     }
-}dgetConfigDto.getPosition());
-        widget.setSettings(widgetConfigDto.getSettings());
-        widget.setRefreshInterval(widgetConfigDto.getRefreshInterval());
-        widget.setOrderIndex(getNextOrderIndex(userId));
-        widget.setEnabled(true);
-        widget.setCreatedAt(Instant.now());
-        widget.setUpdatedAt(Instant.now());
-
-WidgetConfig saved = widgetConfigRepository.save(widget);
-        log.info("Created widget for user {}: {} - {}", userId, saved.getWidgetType(), saved.getTitle());
-
-        return mapToDto(saved);
-    }
-
-public WidgetConfigDto updateWidget(String userId, String widgetId, WidgetConfigDto widgetConfigDto) {
-    validateUser(userId);
-
-    WidgetConfig widget = widgetConfigRepository.findByIdAndUserId(widgetId, userId)
-            .orElseThrow(() -> new InvalidRequestException("Widget not found"));
-
-    widget.setTitle(widgetConfigDto.getTitle());
-    widget.setCity(widgetConfigDto.getCity());
-    widget.setSize(widgetConfigDto.getSize());
-    widget.setPosition(wi
+}
