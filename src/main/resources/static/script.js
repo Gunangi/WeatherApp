@@ -478,7 +478,7 @@ class WeatherApp {
         });
     }
 
-    // Load air quality data
+    // Enhanced Air Quality - Load air quality data with more substances
     async loadAirQuality(city) {
         try {
             if (!this.currentWeatherData) return;
@@ -492,7 +492,7 @@ class WeatherApp {
         }
     }
 
-    // Update air quality UI
+    // Enhanced Air Quality - Update air quality UI with more substances
     updateAirQuality(airData) {
         const aqi = airData.main.aqi;
         const aqiLevels = ['Good', 'Fair', 'Moderate', 'Poor', 'Very Poor'];
@@ -512,12 +512,92 @@ class WeatherApp {
         const colors = ['#22c55e', '#eab308', '#f97316', '#ef4444', '#8b5cf6'];
         aqiCircle.style.background = `conic-gradient(from 0deg, ${colors[aqi - 1]}, ${colors[aqi - 1]})`;
 
+        // Enhanced air quality components with more pollutants and their health effects
         if (airData.components) {
-            document.getElementById('pm25').textContent = Math.round(airData.components.pm2_5) || 'N/A';
-            document.getElementById('pm10').textContent = Math.round(airData.components.pm10) || 'N/A';
-            document.getElementById('o3').textContent = Math.round(airData.components.o3) || 'N/A';
-            document.getElementById('no2').textContent = Math.round(airData.components.no2) || 'N/A';
+            const components = airData.components;
+
+            // Primary pollutants
+            document.getElementById('pm25').textContent = Math.round(components.pm2_5 || 0);
+            document.getElementById('pm10').textContent = Math.round(components.pm10 || 0);
+            document.getElementById('o3').textContent = Math.round(components.o3 || 0);
+            document.getElementById('no2').textContent = Math.round(components.no2 || 0);
+
+            // Additional pollutants - create elements if they don't exist
+            this.updateAirQualityComponent('co', Math.round(components.co || 0), 'μg/m³', 'Carbon Monoxide');
+            this.updateAirQualityComponent('so2', Math.round(components.so2 || 0), 'μg/m³', 'Sulfur Dioxide');
+            this.updateAirQualityComponent('nh3', Math.round(components.nh3 || 0), 'μg/m³', 'Ammonia');
+            this.updateAirQualityComponent('no', Math.round(components.no || 0), 'μg/m³', 'Nitric Oxide');
+
+            // Add health recommendations based on pollutant levels
+            this.updateAirQualityRecommendations(components, aqi);
         }
+    }
+
+    // Helper method to update or create air quality component display
+    updateAirQualityComponent(id, value, unit, name) {
+        let element = document.getElementById(id);
+        if (!element) {
+            // Create the element if it doesn't exist
+            const airQualityDetails = document.querySelector('.air-quality-details');
+            if (airQualityDetails) {
+                const componentDiv = document.createElement('div');
+                componentDiv.className = 'air-quality-item';
+                componentDiv.innerHTML = `
+                    <span class="label">${name}:</span>
+                    <span id="${id}" class="value">${value}</span>
+                    <span class="unit">${unit}</span>
+                `;
+                airQualityDetails.appendChild(componentDiv);
+            }
+        } else {
+            element.textContent = value;
+        }
+    }
+
+    // Add air quality health recommendations
+    updateAirQualityRecommendations(components, aqi) {
+        const recommendationsContainer = document.getElementById('air-quality-recommendations') || this.createAirQualityRecommendations();
+
+        const recommendations = [];
+
+        if (aqi >= 4) {
+            recommendations.push('🚫 Avoid outdoor activities');
+            recommendations.push('🏠 Stay indoors with windows closed');
+            recommendations.push('😷 Wear N95 masks if going outside');
+        } else if (aqi >= 3) {
+            recommendations.push('⚠️ Limit outdoor activities');
+            recommendations.push('🏃‍♂️ Avoid intense outdoor exercise');
+            recommendations.push('🤧 Sensitive individuals should stay indoors');
+        } else if (aqi >= 2) {
+            recommendations.push('🌿 Outdoor activities are generally safe');
+            recommendations.push('👥 Sensitive groups should limit prolonged exposure');
+        } else {
+            recommendations.push('✅ Air quality is excellent for all activities');
+            recommendations.push('🌞 Perfect day for outdoor activities');
+        }
+
+        // Add specific pollutant warnings
+        if (components.pm2_5 > 35) recommendations.push('🫁 High PM2.5 - harmful to respiratory health');
+        if (components.o3 > 180) recommendations.push('🌫️ High ozone levels - may cause breathing difficulties');
+        if (components.no2 > 200) recommendations.push('🚗 High NO2 from traffic - avoid busy roads');
+        if (components.so2 > 350) recommendations.push('🏭 High SO2 levels detected');
+
+        recommendationsContainer.innerHTML = recommendations.map(rec =>
+            `<div class="air-recommendation">${rec}</div>`
+        ).join('');
+    }
+
+    // Create air quality recommendations container
+    createAirQualityRecommendations() {
+        const airQualityCard = document.querySelector('.air-quality');
+        if (airQualityCard) {
+            const container = document.createElement('div');
+            container.id = 'air-quality-recommendations';
+            container.className = 'air-quality-recommendations';
+            airQualityCard.appendChild(container);
+            return container;
+        }
+        return null;
     }
 
     // Load UV Index
@@ -580,116 +660,321 @@ class WeatherApp {
         document.getElementById('uv-recommendation').textContent = uvRecommendation;
     }
 
-    // Load activity recommendations
+    // Enhanced Activity Recommendations - Load activity recommendations with more variety
     loadActivityRecommendations() {
         if (!this.currentWeatherData) return;
 
         const temp = this.currentWeatherData.main.temp;
         const weather = this.currentWeatherData.weather[0].main.toLowerCase();
         const windSpeed = this.currentWeatherData.wind.speed;
+        const humidity = this.currentWeatherData.main.humidity;
+        const hour = new Date().getHours();
 
-        const activities = this.generateActivityRecommendations(temp, weather, windSpeed);
+        const activities = this.generateActivityRecommendations(temp, weather, windSpeed, humidity, hour);
         this.updateActivityRecommendations(activities);
     }
 
-    // Generate activity recommendations based on weather
-    generateActivityRecommendations(temp, weather, windSpeed) {
+    // Enhanced Activity Recommendations - Generate more diverse activity recommendations
+    generateActivityRecommendations(temp, weather, windSpeed, humidity, hour) {
         const activities = [];
 
+        // Weather-based activities
         if (weather.includes('rain') || weather.includes('storm')) {
-            activities.push({ icon: 'fas fa-book', text: 'Reading indoors' });
-            activities.push({ icon: 'fas fa-film', text: 'Watch movies' });
-            activities.push({ icon: 'fas fa-gamepad', text: 'Indoor gaming' });
-        } else if (temp > 25) {
-            activities.push({ icon: 'fas fa-swimmer', text: 'Swimming' });
-            activities.push({ icon: 'fas fa-ice-cream', text: 'Get ice cream' });
-            activities.push({ icon: 'fas fa-umbrella-beach', text: 'Beach visit' });
-        } else if (temp > 15) {
-            activities.push({ icon: 'fas fa-walking', text: 'Walking' });
-            activities.push({ icon: 'fas fa-biking', text: 'Cycling' });
-            activities.push({ icon: 'fas fa-running', text: 'Jogging' });
+            activities.push({ icon: 'fas fa-book', text: 'Reading at a cozy café', category: 'Indoor' });
+            activities.push({ icon: 'fas fa-film', text: 'Movie marathon', category: 'Entertainment' });
+            activities.push({ icon: 'fas fa-gamepad', text: 'Video gaming', category: 'Entertainment' });
+            activities.push({ icon: 'fas fa-utensils', text: 'Cooking new recipes', category: 'Indoor' });
+            activities.push({ icon: 'fas fa-palette', text: 'Indoor art projects', category: 'Creative' });
+            activities.push({ icon: 'fas fa-dumbbell', text: 'Home workout', category: 'Fitness' });
+            activities.push({ icon: 'fas fa-spa', text: 'Spa day at home', category: 'Wellness' });
+        } else if (weather.includes('snow')) {
+            activities.push({ icon: 'fas fa-skiing', text: 'Skiing or snowboarding', category: 'Winter Sports' });
+            activities.push({ icon: 'fas fa-snowman', text: 'Building snowmen', category: 'Fun' });
+            activities.push({ icon: 'fas fa-fire', text: 'Cozy fireplace time', category: 'Indoor' });
+            activities.push({ icon: 'fas fa-mug-hot', text: 'Hot chocolate & treats', category: 'Food' });
+            activities.push({ icon: 'fas fa-camera', text: 'Winter photography', category: 'Creative' });
+        } else if (temp > 30) { // Very hot
+            activities.push({ icon: 'fas fa-swimmer', text: 'Swimming', category: 'Water Sports' });
+            activities.push({ icon: 'fas fa-ice-cream', text: 'Ice cream & frozen treats', category: 'Food' });
+            activities.push({ icon: 'fas fa-umbrella-beach', text: 'Beach or lakeside', category: 'Outdoor' });
+            activities.push({ icon: 'fas fa-cocktail', text: 'Cold drinks on patio', category: 'Social' });
+            activities.push({ icon: 'fas fa-air-freshener', text: 'Indoor air-conditioned activities', category: 'Indoor' });
+            activities.push({ icon: 'fas fa-water', text: 'Water park visit', category: 'Fun' });
+        } else if (temp > 20) { // Warm
+            activities.push({ icon: 'fas fa-hiking', text: 'Hiking trails', category: 'Adventure' });
+            activities.push({ icon: 'fas fa-biking', text: 'Cycling tours', category: 'Fitness' });
+            activities.push({ icon: 'fas fa-running', text: 'Jogging in the park', category: 'Fitness' });
+            activities.push({ icon: 'fas fa-camera', text: 'Outdoor photography', category: 'Creative' });
+            activities.push({ icon: 'fas fa-seedling', text: 'Gardening', category: 'Hobby' });
+            activities.push({ icon: 'fas fa-users', text: 'Picnic with friends', category: 'Social' });
+            activities.push({ icon: 'fas fa-golf-ball', text: 'Golf or mini golf', category: 'Sports' });
+            activities.push({ icon: 'fas fa-kite', text: 'Outdoor sports', category: 'Sports' });
+        } else if (temp > 10) { // Cool
+            activities.push({ icon: 'fas fa-walking', text: 'Nature walks', category: 'Outdoor' });
+            activities.push({ icon: 'fas fa-coffee', text: 'Café hopping', category: 'Social' });
+            activities.push({ icon: 'fas fa-shopping-bag', text: 'Shopping districts', category: 'Leisure' });
+            activities.push({ icon: 'fas fa-tree', text: 'Park exploration', category: 'Nature' });
+            activities.push({ icon: 'fas fa-monument', text: 'Sightseeing tours', category: 'Tourism' });
+            activities.push({ icon: 'fas fa-camera', text: 'Urban photography', category: 'Creative' });
+        } else { // Cold
+            activities.push({ icon: 'fas fa-coffee', text: 'Warm café visits', category: 'Indoor' });
+            activities.push({ icon: 'fas fa-shopping-bag', text: 'Indoor shopping malls', category: 'Leisure' });
+            activities.push({ icon: 'fas fa-dumbbell', text: 'Gym workouts', category: 'Fitness' });
+            activities.push({ icon: 'fas fa-book', text: 'Library visits', category: 'Learning' });
+            activities.push({ icon: 'fas fa-utensils', text: 'Cooking warm meals', category: 'Food' });
+            activities.push({ icon: 'fas fa-hot-tub', text: 'Spa & wellness centers', category: 'Wellness' });
+            activities.push({ icon: 'fas fa-theater-masks', text: 'Indoor entertainment', category: 'Entertainment' });
+        }
+
+        // Wind-based activities
+        if (windSpeed > 15) {
+            activities.push({ icon: 'fas fa-kite', text: 'Kite flying', category: 'Fun' });
+            activities.push({ icon: 'fas fa-sailboat', text: 'Sailing', category: 'Water Sports' });
+            activities.push({ icon: 'fas fa-wind', text: 'Windsurfing', category: 'Adventure' });
+        } else if (windSpeed < 5) {
+            activities.push({ icon: 'fas fa-leaf', text: 'Outdoor meditation', category: 'Wellness' });
+            activities.push({ icon: 'fas fa-camera', text: 'Still photography', category: 'Creative' });
+        }
+
+        // Humidity-based activities
+        if (humidity > 80) {
+            activities.push({ icon: 'fas fa-air-freshener', text: 'Indoor air-conditioned spaces', category: 'Indoor' });
+        }
+
+        // Time-based activities
+        if (hour >= 6 && hour <= 10) {
+            activities.push({ icon: 'fas fa-sun', text: 'Morning yoga', category: 'Wellness' });
+            activities.push({ icon: 'fas fa-running', text: 'Morning jog', category: 'Fitness' });
+            activities.push({ icon: 'fas fa-coffee', text: 'Breakfast café visit', category: 'Food' });
+        } else if (hour >= 11 && hour <= 15) {
+            activities.push({ icon: 'fas fa-utensils', text: 'Lunch at outdoor restaurant', category: 'Food' });
+            activities.push({ icon: 'fas fa-shopping-cart', text: 'Farmers market visit', category: 'Shopping' });
+        } else if (hour >= 16 && hour <= 20) {
+            activities.push({ icon: 'fas fa-cocktail', text: 'Happy hour drinks', category: 'Social' });
+            activities.push({ icon: 'fas fa-users', text: 'Evening social activities', category: 'Social' });
         } else {
-            activities.push({ icon: 'fas fa-coffee', text: 'Café visit' });
-            activities.push({ icon: 'fas fa-shopping-bag', text: 'Indoor shopping' });
-            activities.push({ icon: 'fas fa-dumbbell', text: 'Gym workout' });
+            activities.push({ icon: 'fas fa-moon', text: 'Stargazing', category: 'Nature' });
+            activities.push({ icon: 'fas fa-film', text: 'Evening movies', category: 'Entertainment' });
         }
 
-        if (windSpeed > 10) {
-            activities.push({ icon: 'fas fa-kite', text: 'Kite flying' });
-        }
-
-        return activities;
+        // Shuffle and return a selection
+        return this.shuffleArray(activities).slice(0, 8);
     }
 
-    // Update activity recommendations UI
+    // Enhanced Activity Recommendations - Update activity recommendations UI with categories
     updateActivityRecommendations(activities) {
         const container = document.getElementById('activity-recommendations');
         container.innerHTML = '';
 
+        // Group activities by category
+        const categorized = {};
         activities.forEach(activity => {
-            const item = document.createElement('div');
-            item.className = 'recommendation-item';
-            item.innerHTML = `
-                <i class="${activity.icon}"></i>
-                <span>${activity.text}</span>
-            `;
-            container.appendChild(item);
+            if (!categorized[activity.category]) {
+                categorized[activity.category] = [];
+            }
+            categorized[activity.category].push(activity);
+        });
+
+        // Display activities grouped by category
+        Object.keys(categorized).forEach(category => {
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'activity-category';
+
+            const categoryTitle = document.createElement('h4');
+            categoryTitle.textContent = category;
+            categoryTitle.className = 'category-title';
+            categoryDiv.appendChild(categoryTitle);
+
+            categorized[category].forEach(activity => {
+                const item = document.createElement('div');
+                item.className = 'recommendation-item';
+                item.innerHTML = `
+                    <i class="${activity.icon}"></i>
+                    <span>${activity.text}</span>
+                `;
+                categoryDiv.appendChild(item);
+            });
+
+            container.appendChild(categoryDiv);
         });
     }
 
-    // Load clothing recommendations
+    // Enhanced Clothing Recommendations - Load clothing recommendations with more variety
     loadClothingRecommendations() {
         if (!this.currentWeatherData) return;
 
         const temp = this.currentWeatherData.main.temp;
         const weather = this.currentWeatherData.weather[0].main.toLowerCase();
+        const windSpeed = this.currentWeatherData.wind.speed;
+        const humidity = this.currentWeatherData.main.humidity;
+        const hour = new Date().getHours();
 
-        const clothing = this.generateClothingRecommendations(temp, weather);
+        const clothing = this.generateClothingRecommendations(temp, weather, windSpeed, humidity, hour);
         this.updateClothingRecommendations(clothing);
     }
 
-    // Generate clothing recommendations
-    generateClothingRecommendations(temp, weather) {
-        const clothing = [];
+    // Enhanced Clothing Recommendations - Generate comprehensive clothing recommendations
+    generateClothingRecommendations(temp, weather, windSpeed, humidity, hour) {
+        const clothing = {
+            outerWear: [],
+            topWear: [],
+            bottomWear: [],
+            footwear: [],
+            accessories: [],
+            special: []
+        };
 
-        if (weather.includes('rain')) {
-            clothing.push({ icon: 'fas fa-umbrella', text: 'Umbrella' });
-            clothing.push({ icon: 'fas fa-tshirt', text: 'Waterproof jacket' });
+        // Weather-specific items
+        if (weather.includes('rain') || weather.includes('drizzle')) {
+            clothing.accessories.push({ icon: 'fas fa-umbrella', text: 'Umbrella', priority: 'high' });
+            clothing.outerWear.push({ icon: 'fas fa-tshirt', text: 'Waterproof jacket', priority: 'high' });
+            clothing.footwear.push({ icon: 'fas fa-shoe-prints', text: 'Waterproof boots', priority: 'high' });
+            clothing.accessories.push({ icon: 'fas fa-hat-cowboy', text: 'Waterproof hat', priority: 'medium' });
         }
 
-        if (temp < 5) {
-            clothing.push({ icon: 'fas fa-mitten', text: 'Winter coat' });
-            clothing.push({ icon: 'fas fa-hat-wizard', text: 'Warm hat' });
-            clothing.push({ icon: 'fas fa-socks', text: 'Thick socks' });
-        } else if (temp < 15) {
-            clothing.push({ icon: 'fas fa-tshirt', text: 'Light jacket' });
-            clothing.push({ icon: 'fas fa-socks', text: 'Long pants' });
-        } else if (temp < 25) {
-            clothing.push({ icon: 'fas fa-tshirt', text: 'Light shirt' });
-            clothing.push({ icon: 'fas fa-socks', text: 'Jeans' });
-        } else {
-            clothing.push({ icon: 'fas fa-tshirt', text: 'T-shirt' });
-            clothing.push({ icon: 'fas fa-socks', text: 'Shorts' });
-            clothing.push({ icon: 'fas fa-glasses', text: 'Sunglasses' });
+        if (weather.includes('snow')) {
+            clothing.outerWear.push({ icon: 'fas fa-mitten', text: 'Heavy winter coat', priority: 'high' });
+            clothing.accessories.push({ icon: 'fas fa-mitten', text: 'Insulated gloves', priority: 'high' });
+            clothing.footwear.push({ icon: 'fas fa-shoe-prints', text: 'Snow boots', priority: 'high' });
+            clothing.accessories.push({ icon: 'fas fa-hat-wizard', text: 'Warm winter hat', priority: 'high' });
+            clothing.special.push({ icon: 'fas fa-snowflake', text: 'Thermal underwear', priority: 'high' });
+        }
+
+        // Temperature-based recommendations
+        if (temp < -10) { // Extremely cold
+            clothing.outerWear.push({ icon: 'fas fa-mitten', text: 'Arctic winter coat', priority: 'high' });
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'Thermal base layers', priority: 'high' });
+            clothing.bottomWear.push({ icon: 'fas fa-socks', text: 'Insulated winter pants', priority: 'high' });
+            clothing.footwear.push({ icon: 'fas fa-shoe-prints', text: 'Insulated boots', priority: 'high' });
+            clothing.accessories.push({ icon: 'fas fa-mitten', text: 'Heavy mittens', priority: 'high' });
+            clothing.accessories.push({ icon: 'fas fa-hat-wizard', text: 'Thermal hat', priority: 'high' });
+            clothing.accessories.push({ icon: 'fas fa-user-ninja', text: 'Face mask/balaclava', priority: 'high' });
+        } else if (temp < 0) { // Very cold
+            clothing.outerWear.push({ icon: 'fas fa-mitten', text: 'Heavy winter jacket', priority: 'high' });
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'Wool sweater', priority: 'high' });
+            clothing.bottomWear.push({ icon: 'fas fa-socks', text: 'Thermal leggings', priority: 'medium' });
+            clothing.bottomWear.push({ icon: 'fas fa-socks', text: 'Thick pants', priority: 'high' });
+            clothing.footwear.push({ icon: 'fas fa-shoe-prints', text: 'Winter boots', priority: 'high' });
+            clothing.accessories.push({ icon: 'fas fa-mitten', text: 'Warm gloves', priority: 'high' });
+            clothing.accessories.push({ icon: 'fas fa-hat-wizard', text: 'Knit beanie', priority: 'high' });
+        } else if (temp < 10) { // Cold
+            clothing.outerWear.push({ icon: 'fas fa-tshirt', text: 'Warm jacket', priority: 'high' });
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'Long-sleeve shirt', priority: 'medium' });
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'Sweater or hoodie', priority: 'high' });
+            clothing.bottomWear.push({ icon: 'fas fa-socks', text: 'Long pants/jeans', priority: 'high' });
+            clothing.footwear.push({ icon: 'fas fa-shoe-prints', text: 'Closed-toe shoes', priority: 'medium' });
+            clothing.accessories.push({ icon: 'fas fa-mitten', text: 'Light gloves', priority: 'medium' });
+            clothing.accessories.push({ icon: 'fas fa-user-tag', text: 'Scarf', priority: 'medium' });
+        } else if (temp < 20) { // Cool
+            clothing.outerWear.push({ icon: 'fas fa-tshirt', text: 'Light jacket or cardigan', priority: 'medium' });
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'Long-sleeve shirt', priority: 'medium' });
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'Light sweater', priority: 'low' });
+            clothing.bottomWear.push({ icon: 'fas fa-socks', text: 'Jeans or khakis', priority: 'medium' });
+            clothing.footwear.push({ icon: 'fas fa-shoe-prints', text: 'Sneakers or boots', priority: 'medium' });
+        } else if (temp < 25) { // Mild
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'T-shirt or polo', priority: 'medium' });
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'Light blouse', priority: 'low' });
+            clothing.bottomWear.push({ icon: 'fas fa-socks', text: 'Jeans or chinos', priority: 'medium' });
+            clothing.bottomWear.push({ icon: 'fas fa-socks', text: 'Light pants', priority: 'low' });
+            clothing.footwear.push({ icon: 'fas fa-shoe-prints', text: 'Comfortable sneakers', priority: 'medium' });
+            clothing.outerWear.push({ icon: 'fas fa-tshirt', text: 'Light cardigan (evening)', priority: 'low' });
+        } else if (temp < 30) { // Warm
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'T-shirt or tank top', priority: 'high' });
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'Breathable fabrics', priority: 'medium' });
+            clothing.bottomWear.push({ icon: 'fas fa-socks', text: 'Shorts or skirt', priority: 'high' });
+            clothing.bottomWear.push({ icon: 'fas fa-socks', text: 'Light capris', priority: 'medium' });
+            clothing.footwear.push({ icon: 'fas fa-shoe-prints', text: 'Sandals or canvas shoes', priority: 'medium' });
+            clothing.accessories.push({ icon: 'fas fa-glasses', text: 'Sunglasses', priority: 'high' });
+            clothing.accessories.push({ icon: 'fas fa-hat-cowboy', text: 'Sun hat', priority: 'medium' });
+        } else { // Hot
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'Lightweight shirt', priority: 'high' });
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'Moisture-wicking fabric', priority: 'high' });
+            clothing.bottomWear.push({ icon: 'fas fa-socks', text: 'Shorts or light dress', priority: 'high' });
+            clothing.footwear.push({ icon: 'fas fa-shoe-prints', text: 'Breathable sandals', priority: 'high' });
+            clothing.accessories.push({ icon: 'fas fa-glasses', text: 'UV-protection sunglasses', priority: 'high' });
+            clothing.accessories.push({ icon: 'fas fa-hat-cowboy', text: 'Wide-brim hat', priority: 'high' });
+            clothing.special.push({ icon: 'fas fa-spray-can', text: 'Sunscreen SPF 30+', priority: 'high' });
+        }
+
+        // Wind considerations
+        if (windSpeed > 20) {
+            clothing.accessories.push({ icon: 'fas fa-hat-cowboy', text: 'Secure hat or cap', priority: 'medium' });
+            clothing.outerWear.push({ icon: 'fas fa-tshirt', text: 'Wind-resistant jacket', priority: 'medium' });
+        }
+
+        // Humidity considerations
+        if (humidity > 70) {
+            clothing.topWear.push({ icon: 'fas fa-tshirt', text: 'Breathable, moisture-wicking fabric', priority: 'medium' });
+            clothing.special.push({ icon: 'fas fa-spray-can', text: 'Antiperspirant', priority: 'low' });
+        }
+
+        // Time-based recommendations
+        if (hour >= 18 || hour <= 6) { // Evening/Night
+            clothing.accessories.push({ icon: 'fas fa-lightbulb', text: 'Reflective accessories', priority: 'low' });
+        }
+
+        // UV protection (sunny weather)
+        if (weather.includes('clear') || weather.includes('sun')) {
+            clothing.accessories.push({ icon: 'fas fa-glasses', text: 'Sunglasses', priority: 'medium' });
+            clothing.special.push({ icon: 'fas fa-spray-can', text: 'Sunscreen', priority: 'medium' });
         }
 
         return clothing;
     }
 
-    // Update clothing recommendations UI
+    // Enhanced Clothing Recommendations - Update clothing recommendations UI with categories
     updateClothingRecommendations(clothing) {
         const container = document.getElementById('clothing-suggestions');
         container.innerHTML = '';
 
-        clothing.forEach(item => {
-            const clothingItem = document.createElement('div');
-            clothingItem.className = 'clothing-item';
-            clothingItem.innerHTML = `
-                <i class="${item.icon}"></i>
-                <span>${item.text}</span>
-            `;
-            container.appendChild(clothingItem);
+        const categories = {
+            'Outer Wear': clothing.outerWear,
+            'Tops': clothing.topWear,
+            'Bottoms': clothing.bottomWear,
+            'Footwear': clothing.footwear,
+            'Accessories': clothing.accessories,
+            'Special Items': clothing.special
+        };
+
+        Object.keys(categories).forEach(categoryName => {
+            const items = categories[categoryName];
+            if (items.length === 0) return;
+
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'clothing-category';
+
+            const categoryTitle = document.createElement('h4');
+            categoryTitle.textContent = categoryName;
+            categoryTitle.className = 'clothing-category-title';
+            categoryDiv.appendChild(categoryTitle);
+
+            // Sort by priority (high, medium, low)
+            const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+            items.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]);
+
+            items.forEach(item => {
+                const clothingItem = document.createElement('div');
+                clothingItem.className = `clothing-item priority-${item.priority}`;
+                clothingItem.innerHTML = `
+                    <i class="${item.icon}"></i>
+                    <span>${item.text}</span>
+                    <span class="priority-indicator">${item.priority === 'high' ? '🔥' : item.priority === 'medium' ? '⭐' : ''}</span>
+                `;
+                categoryDiv.appendChild(clothingItem);
+            });
+
+            container.appendChild(categoryDiv);
         });
+    }
+
+    // Utility function to shuffle array
+    shuffleArray(array) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
     }
 
     // Enhanced fetchHistoricalWeather method
