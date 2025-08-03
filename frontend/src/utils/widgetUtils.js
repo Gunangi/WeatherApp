@@ -491,3 +491,4 @@ export const generateRefreshSchedule = (widgets) => {
 
     return schedule;
 };
+

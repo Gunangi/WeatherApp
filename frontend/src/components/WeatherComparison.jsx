@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, BarChart3, TrendingUp, TrendingDown, Droplets, Wind, Eye, Thermometer } from 'lucide-react';
-import WeatherAlerts from "./WeatherAlerts";
 
 const WeatherComparison = ({ onAddLocation }) => {
     const [comparedCities, setComparedCities] = useState([
@@ -53,7 +52,9 @@ const WeatherComparison = ({ onAddLocation }) => {
     };
 
     const addNewCity = () => {
-        onAddLocation();
+        if (onAddLocation) {
+            onAddLocation();
+        }
     };
 
     const getSortedCities = () => {
@@ -181,238 +182,237 @@ const WeatherComparison = ({ onAddLocation }) => {
             </div>
         </div>
     );
+
+    const ComparisonTable = () => (
+        <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
+            <div className="overflow-x-auto">
+                <table className="w-full">
+                    <thead className="bg-white/10">
+                    <tr>
+                        <th className="text-left p-4 text-white font-semibold">City</th>
+                        <th className="text-center p-4 text-white font-semibold cursor-pointer hover:bg-white/10 transition-colors"
+                            onClick={() => setSortBy('temperature')}>
+                            <div className="flex items-center justify-center gap-1">
+                                <Thermometer className="w-4 h-4" />
+                                Temperature
+                                {sortBy === 'temperature' && <TrendingDown className="w-3 h-3" />}
+                            </div>
+                        </th>
+                        <th className="text-center p-4 text-white font-semibold">Condition</th>
+                        <th className="text-center p-4 text-white font-semibold cursor-pointer hover:bg-white/10 transition-colors"
+                            onClick={() => setSortBy('humidity')}>
+                            <div className="flex items-center justify-center gap-1">
+                                <Droplets className="w-4 h-4" />
+                                Humidity
+                                {sortBy === 'humidity' && <TrendingDown className="w-3 h-3" />}
+                            </div>
+                        </th>
+                        <th className="text-center p-4 text-white font-semibold cursor-pointer hover:bg-white/10 transition-colors"
+                            onClick={() => setSortBy('windSpeed')}>
+                            <div className="flex items-center justify-center gap-1">
+                                <Wind className="w-4 h-4" />
+                                Wind
+                                {sortBy === 'windSpeed' && <TrendingDown className="w-3 h-3" />}
+                            </div>
+                        </th>
+                        <th className="text-center p-4 text-white font-semibold cursor-pointer hover:bg-white/10 transition-colors"
+                            onClick={() => setSortBy('pressure')}>
+                            <div className="flex items-center justify-center gap-1">
+                                <BarChart3 className="w-4 h-4" />
+                                Pressure
+                                {sortBy === 'pressure' && <TrendingDown className="w-3 h-3" />}
+                            </div>
+                        </th>
+                        <th className="text-center p-4 text-white font-semibold">Visibility</th>
+                        <th className="text-center p-4 text-white font-semibold">Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {getSortedCities().map((city, index) => (
+                        <tr key={city.id} className={`border-t border-white/10 hover:bg-white/5 transition-colors ${
+                            index % 2 === 0 ? 'bg-white/5' : ''
+                        }`}>
+                            <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">{city.icon}</span>
+                                    <div>
+                                        <div className="font-semibold text-white">{city.name}</div>
+                                        <div className="text-sm text-gray-300">{city.country}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td className="p-4 text-center">
+                                <div className={`text-xl font-bold ${getTemperatureColor(city.temperature)}`}>
+                                    {city.temperature}°C
+                                </div>
+                                <div className="text-xs text-gray-400">Feels {city.feelsLike}°C</div>
+                            </td>
+                            <td className="p-4 text-center">
+                                <span className="text-white">{city.condition}</span>
+                            </td>
+                            <td className="p-4 text-center">
+                                    <span className={`font-semibold ${getHumidityColor(city.humidity)}`}>
+                                        {city.humidity}%
+                                    </span>
+                            </td>
+                            <td className="p-4 text-center">
+                                <div className={`font-semibold ${getWindSpeedLevel(city.windSpeed).color}`}>
+                                    {city.windSpeed} m/s
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                    {getWindSpeedLevel(city.windSpeed).level}
+                                </div>
+                            </td>
+                            <td className="p-4 text-center">
+                                    <span className="font-semibold text-purple-400">
+                                        {city.pressure} hPa
+                                    </span>
+                            </td>
+                            <td className="p-4 text-center">
+                                    <span className="font-semibold text-cyan-400">
+                                        {city.visibility} km
+                                    </span>
+                            </td>
+                            <td className="p-4 text-center">
+                                <button
+                                    onClick={() => removeCity(city.id)}
+                                    className="p-2 rounded-full hover:bg-red-500/20 text-red-400 transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-white">Weather Comparison</h2>
+                <div className="flex items-center gap-4">
+                    {/* View Toggle */}
+                    <div className="flex bg-white/10 rounded-xl p-1">
+                        <button
+                            onClick={() => setViewMode('cards')}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                viewMode === 'cards'
+                                    ? 'bg-blue-500 text-white'
+                                    : 'text-gray-300 hover:text-white'
+                            }`}
+                        >
+                            Cards
+                        </button>
+                        <button
+                            onClick={() => setViewMode('table')}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                viewMode === 'table'
+                                    ? 'bg-blue-500 text-white'
+                                    : 'text-gray-300 hover:text-white'
+                            }`}
+                        >
+                            Table
+                        </button>
+                    </div>
+
+                    {/* Add City Button */}
+                    <button
+                        onClick={addNewCity}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl text-white font-medium transition-colors"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Add City
+                    </button>
+                </div>
+            </div>
+
+            {/* Comparison Stats */}
+            {comparedCities.length > 0 && (
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center">
+                            <div className="text-sm text-gray-400 mb-1">Hottest</div>
+                            <div className="font-bold text-red-400">
+                                {Math.max(...comparedCities.map(c => c.temperature))}°C
+                            </div>
+                            <div className="text-xs text-gray-500">
+                                {comparedCities.find(c => c.temperature === Math.max(...comparedCities.map(city => city.temperature)))?.name}
+                            </div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-sm text-gray-400 mb-1">Coldest</div>
+                            <div className="font-bold text-cyan-400">
+                                {Math.min(...comparedCities.map(c => c.temperature))}°C
+                            </div>
+                            <div className="text-xs text-gray-500">
+                                {comparedCities.find(c => c.temperature === Math.min(...comparedCities.map(city => city.temperature)))?.name}
+                            </div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-sm text-gray-400 mb-1">Most Humid</div>
+                            <div className="font-bold text-blue-400">
+                                {Math.max(...comparedCities.map(c => c.humidity))}%
+                            </div>
+                            <div className="text-xs text-gray-500">
+                                {comparedCities.find(c => c.humidity === Math.max(...comparedCities.map(city => city.humidity)))?.name}
+                            </div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-sm text-gray-400 mb-1">Windiest</div>
+                            <div className="font-bold text-green-400">
+                                {Math.max(...comparedCities.map(c => c.windSpeed))} m/s
+                            </div>
+                            <div className="text-xs text-gray-500">
+                                {comparedCities.find(c => c.windSpeed === Math.max(...comparedCities.map(city => city.windSpeed)))?.name}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Comparison Content */}
+            {comparedCities.length === 0 ? (
+                <div className="text-center py-12">
+                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+                        <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-xl font-semibold text-white mb-2">No Cities to Compare</h3>
+                        <p className="text-gray-400 mb-6">Add cities to start comparing weather conditions</p>
+                        <button
+                            onClick={addNewCity}
+                            className="flex items-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-xl text-white font-medium transition-colors mx-auto"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add Your First City
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    {viewMode === 'cards' ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {getSortedCities().map(city => (
+                                <ComparisonCard key={city.id} city={city} />
+                            ))}
+                        </div>
+                    ) : (
+                        <ComparisonTable />
+                    )}
+                </>
+            )}
+
+            {/* Footer Info */}
+            {comparedCities.length > 0 && (
+                <div className="text-center text-sm text-gray-400">
+                    Comparing {comparedCities.length} cities • Data updated every 30 minutes
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default WeatherComparison;
-
-const ComparisonTable = () => (
-    <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
-        <div className="overflow-x-auto">
-            <table className="w-full">
-                <thead className="bg-white/10">
-                <tr>
-                    <th className="text-left p-4 text-white font-semibold">City</th>
-                    <th className="text-center p-4 text-white font-semibold cursor-pointer hover:bg-white/10 transition-colors"
-                        onClick={() => setSortBy('temperature')}>
-                        <div className="flex items-center justify-center gap-1">
-                            <Thermometer className="w-4 h-4" />
-                            Temperature
-                            {sortBy === 'temperature' && <TrendingDown className="w-3 h-3" />}
-                        </div>
-                    </th>
-                    <th className="text-center p-4 text-white font-semibold">Condition</th>
-                    <th className="text-center p-4 text-white font-semibold cursor-pointer hover:bg-white/10 transition-colors"
-                        onClick={() => setSortBy('humidity')}>
-                        <div className="flex items-center justify-center gap-1">
-                            <Droplets className="w-4 h-4" />
-                            Humidity
-                            {sortBy === 'humidity' && <TrendingDown className="w-3 h-3" />}
-                        </div>
-                    </th>
-                    <th className="text-center p-4 text-white font-semibold cursor-pointer hover:bg-white/10 transition-colors"
-                        onClick={() => setSortBy('windSpeed')}>
-                        <div className="flex items-center justify-center gap-1">
-                            <Wind className="w-4 h-4" />
-                            Wind
-                            {sortBy === 'windSpeed' && <TrendingDown className="w-3 h-3" />}
-                        </div>
-                    </th>
-                    <th className="text-center p-4 text-white font-semibold cursor-pointer hover:bg-white/10 transition-colors"
-                        onClick={() => setSortBy('pressure')}>
-                        <div className="flex items-center justify-center gap-1">
-                            <BarChart3 className="w-4 h-4" />
-                            Pressure
-                            {sortBy === 'pressure' && <TrendingDown className="w-3 h-3" />}
-                        </div>
-                    </th>
-                    <th className="text-center p-4 text-white font-semibold">Visibility</th>
-                    <th className="text-center p-4 text-white font-semibold">Action</th>
-                </tr>
-                </thead>
-                <tbody>
-                {getSortedCities().map((city, index) => (
-                    <tr key={city.id} className={`border-t border-white/10 hover:bg-white/5 transition-colors ${
-                        index % 2 === 0 ? 'bg-white/5' : ''
-                    }`}>
-                        <td className="p-4">
-                            <div className="flex items-center gap-3">
-                                <span className="text-2xl">{city.icon}</span>
-                                <div>
-                                    <div className="font-semibold text-white">{city.name}</div>
-                                    <div className="text-sm text-gray-300">{city.country}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td className="p-4 text-center">
-                            <div className={`text-xl font-bold ${getTemperatureColor(city.temperature)}`}>
-                                {city.temperature}°C
-                            </div>
-                            <div className="text-xs text-gray-400">Feels {city.feelsLike}°C</div>
-                        </td>
-                        <td className="p-4 text-center">
-                            <span className="text-white">{city.condition}</span>
-                        </td>
-                        <td className="p-4 text-center">
-                  <span className={`font-semibold ${getHumidityColor(city.humidity)}`}>
-                    {city.humidity}%
-                  </span>
-                        </td>
-                        <td className="p-4 text-center">
-                            <div className={`font-semibold ${getWindSpeedLevel(city.windSpeed).color}`}>
-                                {city.windSpeed} m/s
-                            </div>
-                            <div className="text-xs text-gray-400">
-                                {getWindSpeedLevel(city.windSpeed).level}
-                            </div>
-                        </td>
-                        <td className="p-4 text-center">
-                  <span className="font-semibold text-purple-400">
-                    {city.pressure} hPa
-                  </span>
-                        </td>
-                        <td className="p-4 text-center">
-                  <span className="font-semibold text-cyan-400">
-                    {city.visibility} km
-                  </span>
-                        </td>
-                        <td className="p-4 text-center">
-                            <button
-                                onClick={() => removeCity(city.id)}
-                                className="p-2 rounded-full hover:bg-red-500/20 text-red-400 transition-colors"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
-        </div>
-    </div>
-);
-
-return (
-    <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-white">Weather Comparison</h2>
-            <div className="flex items-center gap-4">
-                {/* View Toggle */}
-                <div className="flex bg-white/10 rounded-xl p-1">
-                    <button
-                        onClick={() => setViewMode('cards')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            viewMode === 'cards'
-                                ? 'bg-blue-500 text-white'
-                                : 'text-gray-300 hover:text-white'
-                        }`}
-                    >
-                        Cards
-                    </button>
-                    <button
-                        onClick={() => setViewMode('table')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            viewMode === 'table'
-                                ? 'bg-blue-500 text-white'
-                                : 'text-gray-300 hover:text-white'
-                        }`}
-                    >
-                        Table
-                    </button>
-                </div>
-
-                {/* Add City Button */}
-                <button
-                    onClick={addNewCity}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl text-white font-medium transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
-                    Add City
-                </button>
-            </div>
-        </div>
-
-        {/* Comparison Stats */}
-        {comparedCities.length > 0 && (
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                        <div className="text-sm text-gray-400 mb-1">Hottest</div>
-                        <div className="font-bold text-red-400">
-                            {Math.max(...comparedCities.map(c => c.temperature))}°C
-                        </div>
-                        <div className="text-xs text-gray-500">
-                            {comparedCities.find(c => c.temperature === Math.max(...comparedCities.map(city => city.temperature)))?.name}
-                        </div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-sm text-gray-400 mb-1">Coldest</div>
-                        <div className="font-bold text-cyan-400">
-                            {Math.min(...comparedCities.map(c => c.temperature))}°C
-                        </div>
-                        <div className="text-xs text-gray-500">
-                            {comparedCities.find(c => c.temperature === Math.min(...comparedCities.map(city => city.temperature)))?.name}
-                        </div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-sm text-gray-400 mb-1">Most Humid</div>
-                        <div className="font-bold text-blue-400">
-                            {Math.max(...comparedCities.map(c => c.humidity))}%
-                        </div>
-                        <div className="text-xs text-gray-500">
-                            {comparedCities.find(c => c.humidity === Math.max(...comparedCities.map(city => city.humidity)))?.name}
-                        </div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-sm text-gray-400 mb-1">Windiest</div>
-                        <div className="font-bold text-green-400">
-                            {Math.max(...comparedCities.map(c => c.windSpeed))} m/s
-                        </div>
-                        <div className="text-xs text-gray-500">
-                            {comparedCities.find(c => c.windSpeed === Math.max(...comparedCities.map(city => city.windSpeed)))?.name}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* Comparison Content */}
-        {comparedCities.length === 0 ? (
-            <div className="text-center py-12">
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-                    <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-white mb-2">No Cities to Compare</h3>
-                    <p className="text-gray-400 mb-6">Add cities to start comparing weather conditions</p>
-                    <button
-                        onClick={addNewCity}
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-xl text-white font-medium transition-colors mx-auto"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add Your First City
-                    </button>
-                </div>
-            </div>
-        ) : (
-            <>
-                {viewMode === 'cards' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {getSortedCities().map(city => (
-                            <ComparisonCard key={city.id} city={city} />
-                        ))}
-                    </div>
-                ) : (
-                    <ComparisonTable />
-                )}
-            </>
-        )}
-
-        {/* Footer Info */}
-        {comparedCities.length > 0 && (
-            <div className="text-center text-sm text-gray-400">
-                Comparing {comparedCities.length} cities • Data updated every 30 minutes
-            </div>
-        )}
-    </div>
-);
-
 

@@ -485,3 +485,4 @@ class DateUtils {
 // Export singleton instance
 const dateUtils = new DateUtils();
 export default dateUtils;
+export { dateUtils };

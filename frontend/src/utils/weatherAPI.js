@@ -1,7 +1,7 @@
 // weatherAPI.js - API calls to weather services
 
 class WeatherAPI {
-    constructor(apiKey = 'your-api-key-here') {
+    constructor(apiKey = '38b64d931ea106a38a71f9ec1643ba9d') {
         this.API_KEY = apiKey;
         this.BASE_URL = 'https://api.openweathermap.org/data/2.5';
         this.GEO_URL = 'https://api.openweathermap.org/geo/1.0';
@@ -420,3 +420,5 @@ class WeatherAPI {
 // Export singleton instance
 const weatherAPI = new WeatherAPI();
 export default weatherAPI;
+
+export { weatherAPI };

@@ -31,8 +31,8 @@ class LocalStorageManager {
     checkSupport() {
         try {
             const test = '__localStorage_test__';
-            localStorage.setItem(test, test);
-            localStorage.removeItem(test);
+            window.localStorage.setItem(test, test);
+            window.localStorage.removeItem(test);
             return true;
         } catch (error) {
             console.warn('localStorage is not supported:', error);
@@ -61,7 +61,7 @@ class LocalStorageManager {
                 this.cleanupOldData();
             }
 
-            localStorage.setItem(key, serialized);
+            window.localStorage.setItem(key, serialized);
             return true;
         } catch (error) {
             console.error(`Failed to save to localStorage (${key}):`, error);
@@ -69,7 +69,7 @@ class LocalStorageManager {
             if (error.name === 'QuotaExceededError') {
                 this.cleanupOldData();
                 try {
-                    localStorage.setItem(key, JSON.stringify({ value, timestamp: Date.now(), expiry }));
+                    window.localStorage.setItem(key, JSON.stringify({ value, timestamp: Date.now(), expiry }));
                     return true;
                 } catch (retryError) {
                     console.error('Failed to save after cleanup:', retryError);
@@ -87,7 +87,7 @@ class LocalStorageManager {
         }
 
         try {
-            const item = localStorage.getItem(key);
+            const item = window.localStorage.getItem(key);
             if (!item) return defaultValue;
 
             const data = JSON.parse(item);
@@ -112,7 +112,7 @@ class LocalStorageManager {
         }
 
         try {
-            localStorage.removeItem(key);
+            window.localStorage.removeItem(key);
             return true;
         } catch (error) {
             console.error(`Failed to remove from localStorage (${key}):`, error);
@@ -129,7 +129,7 @@ class LocalStorageManager {
 
         try {
             Object.values(STORAGE_KEYS).forEach(key => {
-                localStorage.removeItem(key);
+                window.localStorage.removeItem(key);
             });
         } catch (error) {
             console.error('Failed to clear localStorage:', error);
@@ -272,7 +272,7 @@ class LocalStorageManager {
             };
 
             Object.entries(STORAGE_KEYS).forEach(([key, storageKey]) => {
-                const data = localStorage.getItem(storageKey);
+                const data = window.localStorage.getItem(storageKey);
                 if (data) {
                     backup.data[key] = data;
                 }
@@ -301,7 +301,7 @@ class LocalStorageManager {
             Object.entries(backup.data).forEach(([key, value]) => {
                 const storageKey = STORAGE_KEYS[key];
                 if (storageKey) {
-                    localStorage.setItem(storageKey, value);
+                    window.localStorage.setItem(storageKey, value);
                 }
             });
 
@@ -317,9 +317,9 @@ class LocalStorageManager {
         if (!this.isSupported) return 0;
 
         let total = 0;
-        for (let key in localStorage) {
-            if (localStorage.hasOwnProperty(key)) {
-                total += localStorage[key].length + key.length;
+        for (let key in window.localStorage) {
+            if (window.localStorage.hasOwnProperty(key)) {
+                total += window.localStorage[key].length + key.length;
             }
         }
         return total;
@@ -331,7 +331,7 @@ class LocalStorageManager {
         }
 
         const size = this.getStorageSize();
-        const itemCount = Object.keys(localStorage).length;
+        const itemCount = Object.keys(window.localStorage).length;
 
         return {
             supported: true,
@@ -359,21 +359,21 @@ class LocalStorageManager {
         if (!this.isSupported) return;
 
         try {
-            const keys = Object.keys(localStorage);
+            const keys = Object.keys(window.localStorage);
             const now = Date.now();
 
             keys.forEach(key => {
                 try {
-                    const item = localStorage.getItem(key);
+                    const item = window.localStorage.getItem(key);
                     if (item) {
                         const data = JSON.parse(item);
                         if (data.expiry && now > data.expiry) {
-                            localStorage.removeItem(key);
+                            window.localStorage.removeItem(key);
                         }
                     }
                 } catch (error) {
                     // Invalid JSON, remove the item
-                    localStorage.removeItem(key);
+                    window.localStorage.removeItem(key);
                 }
             });
 
@@ -387,13 +387,13 @@ class LocalStorageManager {
     }
 
     cleanupOldestCache() {
-        const keys = Object.keys(localStorage);
+        const keys = Object.keys(window.localStorage);
         const cacheKeys = keys.filter(key => key.includes('_cache_'));
 
         // Sort by timestamp and remove oldest
         const cacheEntries = cacheKeys.map(key => {
             try {
-                const data = JSON.parse(localStorage.getItem(key));
+                const data = JSON.parse(window.localStorage.getItem(key));
                 return { key, timestamp: data.timestamp || 0 };
             } catch {
                 return { key, timestamp: 0 };
@@ -403,7 +403,7 @@ class LocalStorageManager {
         // Remove oldest 25% of cache entries
         const toRemove = Math.ceil(cacheEntries.length * 0.25);
         cacheEntries.slice(0, toRemove).forEach(entry => {
-            localStorage.removeItem(entry.key);
+            window.localStorage.removeItem(entry.key);
         });
     }
 
@@ -503,11 +503,12 @@ class LocalStorageManager {
     }
 }
 
-// Create singleton instance
+// Create singleton instance with a different name to avoid conflicts
 const storageManager = new LocalStorageManager();
 
-// Export the manager and utilities
+// Export the manager as default and named export
 export default storageManager;
+export { storageManager };
 
 // Convenience functions
 export const getUserPreferences = () => storageManager.getUserPreferences();

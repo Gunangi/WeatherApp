@@ -1,5 +1,5 @@
 // Notification types
-export const NOTIFICATION_TYPES = {
+const NOTIFICATION_TYPES = {
     WEATHER_ALERT: 'weather_alert',
     RAIN_ALERT: 'rain_alert',
     TEMPERATURE_ALERT: 'temperature_alert',
@@ -11,7 +11,7 @@ export const NOTIFICATION_TYPES = {
 };
 
 // Notification priorities
-export const NOTIFICATION_PRIORITIES = {
+const NOTIFICATION_PRIORITIES = {
     LOW: 'low',
     NORMAL: 'normal',
     HIGH: 'high',

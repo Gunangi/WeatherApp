@@ -1,51 +1,61 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import {
     Search, MapPin, Settings, Moon, Sun, Wind, Eye, Droplets, Gauge,
     Sunrise, Sunset, Thermometer, AlertTriangle, Navigation, Clock,
     Heart, Star, Bell, TrendingUp, Umbrella, Shirt, Calendar, Share2,
-    Menu, X, Grid, List, Map, BarChart3
+    Menu, X, Grid, List, Map, BarChart3, Loader
 } from 'lucide-react';
 import './App.css';
 
-// Import all your components (simulated for demo)
-// In your actual app, these would be real imports:
-// import WeatherDisplay from './components/WeatherDisplay';
-// import AirQuality from './components/AirQuality';
-// import ForecastCards from './components/ForecastCards';
-// import WeatherAlerts from './components/WeatherAlerts';
-// import SearchBar from './components/SearchBar';
-// import SettingsPanel from './components/SettingsPanel';
-// import ThemeToggle from './components/ThemeToggle';
-// import ActivitySuggestions from './components/ActivitySuggestions';
-// import ClothingSuggestions from './components/ClothingSuggestions';
-// import HistoricalWeather from './components/HistoricalWeather';
-// import LocationHistory from './components/LocationHistory';
-// import TravelPlanner from './components/TravelPlanner';
-// import WeatherComparison from './components/WeatherComparison';
-// import WeatherWidgets from './components/WeatherWidgets';
+// Context Providers
+import { WeatherContext } from './context/WeatherContext';
+import { ThemeContext } from './context/ThemeContext';
+import { UserContext } from './context/UserContext';
 
-// Import contexts (simulated for demo)
-// import { WeatherContext } from './context/WeatherContext';
-// import { ThemeContext } from './context/ThemeContext';
-// import { UserContext } from './context/UserContext';
+// Custom Hooks
+import { useGeolocation } from './hooks/useGeolocation';
+import { useNotifications } from './hooks/useNotifications';
+import { useWeather } from './hooks/useWeather';
+import { useWidgets } from './hooks/useWidgets';
 
-// Import hooks (simulated for demo)
-// import { useGeolocation } from './hooks/useGeolocation';
-// import { useNotifications } from './hooks/useNotifications';
-// import { useWeather } from './hooks/useWeather';
-// import { useWidgets } from './hooks/useWidgets';
+// Utils
+import { weatherAPI } from './utils/weatherAPI';
+import { dateUtils } from './utils/dateUtils';
+import { geolocation } from './utils/geolocation';
+import storageManager from './utils/localStorage';
+import notificationManager from './utils/notification';
+import { unitConversions } from './utils/unitConversions';
+import { widgetUtils } from './utils/widgetUtils';
 
-// Import utils (simulated for demo)
-// import { weatherAPI } from './utils/weatherAPI';
-// import { dateUtils } from './utils/dateUtils';
-// import { geolocation } from './utils/geolocation';
-// import { localStorage } from './utils/localStorage';
-// import { notification } from './utils/notification';
-// import { unitConversions } from './utils/unitConversions';
-// import { widgetUtils } from './utils/widgetUtils';
+// Components - Lazy loaded for better performance
+const WeatherDisplay = React.lazy(() => import('./components/WeatherDisplay'));
+const AirQuality = React.lazy(() => import('./components/AirQuality'));
+const ForecastCards = React.lazy(() => import('./components/ForecastCards'));
+const WeatherAlerts = React.lazy(() => import('./components/WeatherAlerts'));
+const SearchBar = React.lazy(() => import('./components/SearchBar'));
+const SettingsPanel = React.lazy(() => import('./components/SettingsPanel'));
+const ThemeToggle = React.lazy(() => import('./components/ThemeToggle'));
+const ActivitySuggestions = React.lazy(() => import('./components/ActivitySuggestions'));
+const ClothingSuggestions = React.lazy(() => import('./components/ClothingSuggestions'));
+const HistoricalWeather = React.lazy(() => import('./components/HistoricalWeather'));
+const LocationHistory = React.lazy(() => import('./components/LocationHistory'));
+const TravelPlanner = React.lazy(() => import('./components/TravelPlanner'));
+const WeatherComparison = React.lazy(() => import('./components/WeatherComparison'));
+const WeatherWidgets = React.lazy(() => import('./components/WeatherWidgets'));
+const BaseWidget = React.lazy(() => import('./components/BaseWidget'));
+
+// Loading Component
+const LoadingSpinner = () => (
+    <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+            <Loader className="w-16 h-16 animate-spin mx-auto mb-4 text-white" />
+            <p className="text-white text-lg">Loading...</p>
+        </div>
+    </div>
+);
 
 const App = () => {
-    // Main state management
+    // State Management
     const [weather, setWeather] = useState(null);
     const [forecast, setForecast] = useState(null);
     const [hourlyForecast, setHourlyForecast] = useState(null);
@@ -55,145 +65,336 @@ const App = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // UI state
-    const [isDark, setIsDark] = useState(true);
-    const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
-    const [activeView, setActiveView] = useState('dashboard');
+    // UI State
+    const [isDark, setIsDark] = useState(() =>
+        storageManager.getItem('theme') === 'dark' ||
+        (!storageManager.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    );
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [activeView, setActiveView] = useState(() =>
+        storageManager.getItem('activeView') || 'dashboard'
+    );
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
 
-    // User preferences
-    const [tempUnit, setTempUnit] = useState('C');
-    const [favorites, setFavorites] = useState(['Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Kolkata']);
-    const [notifications, setNotifications] = useState(true);
-    const [location, setLocation] = useState({ city: 'Delhi', country: 'IN', lat: 28.6139, lon: 77.2090 });
+    // User Preferences
+    const [tempUnit, setTempUnit] = useState(() =>
+        storageManager.getItem('tempUnit') || 'C'
+    );
+    const [favorites, setFavorites] = useState(() =>
+        JSON.parse(storageManager.getItem('favorites')) ||
+        ['Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Kolkata']
+    );
+    const [notifications, setNotifications] = useState(() =>
+        JSON.parse(storageManager.getItem('notifications')) !== false
+    );
+    const [location, setLocation] = useState(() =>
+        JSON.parse(storageManager.getItem('lastLocation')) ||
+        { city: 'Delhi', country: 'IN', lat: 28.6139, lon: 77.2090 }
+    );
 
-    // Widget and layout state
-    const [activeWidgets, setActiveWidgets] = useState([
-        'current-weather', 'forecast', 'air-quality', 'alerts'
-    ]);
-    const [viewMode, setViewMode] = useState('grid'); // grid, list, map
+    // Widget and Layout State
+    const [activeWidgets, setActiveWidgets] = useState(() =>
+        JSON.parse(storageManager.getItem('activeWidgets')) ||
+        ['current-weather', 'forecast', 'air-quality', 'alerts']
+    );
+    const [viewMode, setViewMode] = useState(() =>
+        storageManager.getItem('viewMode') || 'grid'
+    );
 
-    // Simulated data for demo
-    const simulatedWeather = {
-        name: "Delhi",
-        sys: { country: "IN", sunrise: 1691200800, sunset: 1691247600 },
-        main: { temp: 31, feels_like: 38, humidity: 82, pressure: 1002 },
-        weather: [{ main: "Clouds", description: "broken clouds", icon: "04d" }],
-        wind: { speed: 2.2 },
-        visibility: 10000,
-        coord: { lat: 28.6139, lon: 77.2090 },
-        timezone: 19800
-    };
+    // Custom Hooks
+    const { position, error: geoError, getCurrentPosition } = useGeolocation();
+    const { requestPermission, showNotification } = useNotifications();
+    const {
+        fetchCurrentWeather,
+        fetchForecast,
+        fetchHourlyForecast,
+        fetchAirQuality,
+        fetchAlerts,
+        fetchHistoricalData
+    } = useWeather();
+    const { availableWidgets, widgetConfigs } = useWidgets();
 
-    const simulatedForecast = {
-        list: Array.from({ length: 5 }, (_, i) => ({
-            dt: Math.floor(Date.now() / 1000) + (i * 86400),
-            main: { temp_max: 32 - i, temp_min: 28 - i, temp: 30 - i },
-            weather: [{ main: i % 2 === 0 ? "Rain" : "Clouds", description: i % 2 === 0 ? "light rain" : "broken clouds" }]
-        }))
-    };
-
-    const simulatedAirQuality = {
-        list: [{
-            main: { aqi: 3 },
-            components: { co: 233.4, no: 0.01, no2: 13.4, o3: 54.3, so2: 8.2, pm2_5: 15.3, pm10: 20.1, nh3: 4.6 }
-        }]
-    };
-
-    const simulatedAlerts = [
-        {
-            sender_name: "India Meteorological Department",
-            event: "Heat Wave Warning",
-            start: Math.floor(Date.now() / 1000),
-            end: Math.floor(Date.now() / 1000) + 86400 * 2,
-            description: "Heat wave conditions are likely to prevail over Delhi and adjoining areas."
-        }
-    ];
-
-    // Initialize app
+    // Initialize app and setup event listeners
     useEffect(() => {
         initializeApp();
-        const timer = setInterval(() => {
-            setCurrentTime(new Date().toLocaleTimeString('en-US', {
-                hour: '2-digit', minute: '2-digit', hour12: true
-            }));
+        setupEventListeners();
+
+        // Update time every second
+        const timeInterval = setInterval(() => {
+            setCurrentTime(new Date());
         }, 1000);
-        return () => clearInterval(timer);
+
+        // Cleanup
+        return () => {
+            clearInterval(timeInterval);
+            cleanupEventListeners();
+        };
     }, []);
 
+    // Save preferences to localStorage when they change
+    useEffect(() => {
+        storageManager.setItem('theme', isDark ? 'dark' : 'light');
+    }, [isDark]);
+
+    useEffect(() => {
+        storageManager.setItem('activeView', activeView);
+    }, [activeView]);
+
+    useEffect(() => {
+        storageManager.setItem('tempUnit', tempUnit);
+    }, [tempUnit]);
+
+    useEffect(() => {
+        storageManager.setItem('favorites', JSON.stringify(favorites));
+    }, [favorites]);
+
+    useEffect(() => {
+        storageManager.setItem('notifications', JSON.stringify(notifications));
+    }, [notifications]);
+
+    useEffect(() => {
+        storageManager.setItem('lastLocation', JSON.stringify(location));
+    }, [location]);
+
+    useEffect(() => {
+        storageManager.setItem('activeWidgets', JSON.stringify(activeWidgets));
+    }, [activeWidgets]);
+
+    useEffect(() => {
+        storageManager.setItem('viewMode', viewMode);
+    }, [viewMode]);
+
+    // Initialize application
     const initializeApp = async () => {
         try {
             setLoading(true);
-            // Simulate loading data
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            setError(null);
 
-            setWeather(simulatedWeather);
-            setForecast(simulatedForecast);
-            setAirQuality(simulatedAirQuality);
-            setAlerts(simulatedAlerts);
+            // Request notification permission if enabled
+            if (notifications) {
+                await requestPermission();
+            }
+
+            // Get user location if available
+            if (position) {
+                setLocation({
+                    ...location,
+                    lat: position.coords.latitude,
+                    lon: position.coords.longitude
+                });
+            }
+
+            // Load initial weather data
+            await loadWeatherData(location);
 
         } catch (err) {
+            console.error('App initialization error:', err);
+            setError('Failed to initialize the application');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Load weather data for a location
+    const loadWeatherData = async (locationData) => {
+        try {
+            setLoading(true);
+
+            const [
+                currentWeather,
+                forecastData,
+                hourlyData,
+                airQualityData,
+                alertsData,
+                historicalWeatherData
+            ] = await Promise.allSettled([
+                fetchCurrentWeather(locationData.lat, locationData.lon),
+                fetchForecast(locationData.lat, locationData.lon),
+                fetchHourlyForecast(locationData.lat, locationData.lon),
+                fetchAirQuality(locationData.lat, locationData.lon),
+                fetchAlerts(locationData.lat, locationData.lon),
+                fetchHistoricalData(locationData.lat, locationData.lon, 7) // Last 7 days
+            ]);
+
+            // Handle successful responses
+            if (currentWeather.status === 'fulfilled') {
+                setWeather(currentWeather.value);
+            }
+
+            if (forecastData.status === 'fulfilled') {
+                setForecast(forecastData.value);
+            }
+
+            if (hourlyData.status === 'fulfilled') {
+                setHourlyForecast(hourlyData.value);
+            }
+
+            if (airQualityData.status === 'fulfilled') {
+                setAirQuality(airQualityData.value);
+            }
+
+            if (alertsData.status === 'fulfilled') {
+                setAlerts(alertsData.value);
+
+                // Show notifications for new alerts
+                if (notifications && alertsData.value.length > 0) {
+                    alertsData.value.forEach(alert => {
+                        showNotification(
+                            alert.event,
+                            alert.description,
+                            { tag: `alert-${alert.start}` }
+                        );
+                    });
+                }
+            }
+
+            if (historicalWeatherData.status === 'fulfilled') {
+                setHistoricalData(historicalWeatherData.value);
+            }
+
+        } catch (err) {
+            console.error('Weather data loading error:', err);
             setError('Failed to load weather data');
         } finally {
             setLoading(false);
         }
     };
 
-    // Navigation items
+    // Setup event listeners
+    const setupEventListeners = () => {
+        // Handle online/offline status
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        // Handle app visibility changes
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Handle keyboard shortcuts
+        document.addEventListener('keydown', handleKeyboardShortcuts);
+    };
+
+    // Cleanup event listeners
+    const cleanupEventListeners = () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        document.removeEventListener('keydown', handleKeyboardShortcuts);
+    };
+
+    // Event handlers
+    const handleOnline = () => {
+        console.log('App is online');
+        loadWeatherData(location);
+    };
+
+    const handleOffline = () => {
+        console.log('App is offline');
+        showNotification('Offline', 'You are now offline. Some features may be limited.');
+    };
+
+    const handleVisibilityChange = () => {
+        if (!document.hidden && notifications) {
+            // Refresh data when app becomes visible
+            loadWeatherData(location);
+        }
+    };
+
+    const handleKeyboardShortcuts = (event) => {
+        // Ctrl/Cmd + K to open search
+        if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+            event.preventDefault();
+            // Focus search input
+            document.querySelector('.search-input')?.focus();
+        }
+
+        // Escape to close modals
+        if (event.key === 'Escape') {
+            setSettingsOpen(false);
+            setSidebarOpen(false);
+        }
+    };
+
+    // Navigation items configuration
     const navigationItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: Grid },
-        { id: 'current', label: 'Current Weather', icon: Thermometer },
-        { id: 'hourly', label: 'Hourly Forecast', icon: Clock },
-        { id: 'forecast', label: '5-Day Forecast', icon: Calendar },
-        { id: 'air-quality', label: 'Air Quality', icon: Wind },
-        { id: 'alerts', label: 'Weather Alerts', icon: AlertTriangle },
-        { id: 'maps', label: 'Weather Maps', icon: Map },
-        { id: 'historical', label: 'Historical Data', icon: BarChart3 },
-        { id: 'activities', label: 'Activity Suggestions', icon: TrendingUp },
-        { id: 'clothing', label: 'Clothing Suggestions', icon: Shirt },
-        { id: 'travel', label: 'Travel Planner', icon: Navigation },
-        { id: 'comparison', label: 'City Comparison', icon: BarChart3 },
-        { id: 'widgets', label: 'Weather Widgets', icon: Grid }
+        { id: 'dashboard', label: 'Dashboard', icon: Grid, component: 'Dashboard' },
+        { id: 'current', label: 'Current Weather', icon: Thermometer, component: 'WeatherDisplay' },
+        { id: 'hourly', label: 'Hourly Forecast', icon: Clock, component: 'HourlyForecast' },
+        { id: 'forecast', label: '5-Day Forecast', icon: Calendar, component: 'ForecastCards' },
+        { id: 'air-quality', label: 'Air Quality', icon: Wind, component: 'AirQuality' },
+        { id: 'alerts', label: 'Weather Alerts', icon: AlertTriangle, component: 'WeatherAlerts' },
+        { id: 'maps', label: 'Weather Maps', icon: Map, component: 'WeatherMaps' },
+        { id: 'historical', label: 'Historical Data', icon: BarChart3, component: 'HistoricalWeather' },
+        { id: 'activities', label: 'Activity Suggestions', icon: TrendingUp, component: 'ActivitySuggestions' },
+        { id: 'clothing', label: 'Clothing Suggestions', icon: Shirt, component: 'ClothingSuggestions' },
+        { id: 'travel', label: 'Travel Planner', icon: Navigation, component: 'TravelPlanner' },
+        { id: 'comparison', label: 'City Comparison', icon: BarChart3, component: 'WeatherComparison' },
+        { id: 'widgets', label: 'Weather Widgets', icon: Grid, component: 'WeatherWidgets' }
     ];
+
+    // Handle location change
+    const handleLocationChange = async (newLocation) => {
+        setLocation(newLocation);
+        await loadWeatherData(newLocation);
+    };
+
+    // Handle search
+    const handleSearch = async (query) => {
+        try {
+            const searchResults = await weatherAPI.searchLocations(query);
+            return searchResults;
+        } catch (err) {
+            console.error('Search error:', err);
+            return [];
+        }
+    };
+
+    // Add to favorites
+    const addToFavorites = (cityName) => {
+        if (!favorites.includes(cityName)) {
+            setFavorites([...favorites, cityName]);
+        }
+    };
+
+    // Remove from favorites
+    const removeFromFavorites = (cityName) => {
+        setFavorites(favorites.filter(city => city !== cityName));
+    };
 
     // Header Component
     const Header = () => (
-        <header className="flex justify-between items-center mb-8 p-6 bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl">
-            <div className="flex items-center gap-4">
+        <header className="header">
+            <div className="header-left">
                 <button
                     onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className="p-2 bg-white/20 backdrop-blur-xl border border-white/30 rounded-xl text-white hover:bg-white/30 transition-all lg:hidden"
+                    className="header-btn mobile-menu-btn"
                 >
                     <Menu size={20} />
                 </button>
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Weather App</h1>
-                    <span className="text-white/80 text-sm">{currentTime}</span>
+                    <h1 className="header-title">Weather App</h1>
+                    <span className="header-time">
+                        {dateUtils.formatTime(currentTime)}
+                    </span>
                 </div>
             </div>
-            <div className="flex gap-4">
+            <div className="header-controls">
                 <button
                     onClick={() => setTempUnit(tempUnit === 'C' ? 'F' : 'C')}
-                    className="px-4 py-2 bg-white/20 backdrop-blur-xl border border-white/30 rounded-xl text-white hover:bg-white/30 transition-all"
+                    className="header-btn temp-unit-btn"
                 >
                     °{tempUnit}
                 </button>
                 <button
                     onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                    className="p-3 bg-white/20 backdrop-blur-xl border border-white/30 rounded-xl text-white hover:bg-white/30 transition-all"
+                    className="header-btn"
                 >
                     {viewMode === 'grid' ? <List size={20} /> : <Grid size={20} />}
                 </button>
-                <button
-                    onClick={() => setIsDark(!isDark)}
-                    className="p-3 bg-white/20 backdrop-blur-xl border border-white/30 rounded-xl text-white hover:bg-white/30 transition-all"
-                >
-                    {isDark ? <Sun size={20} /> : <Moon size={20} />}
-                </button>
+                <ThemeToggle isDark={isDark} onToggle={setIsDark} />
                 <button
                     onClick={() => setSettingsOpen(true)}
-                    className="p-3 bg-white/20 backdrop-blur-xl border border-white/30 rounded-xl text-white hover:bg-white/30 transition-all"
+                    className="header-btn"
                 >
                     <Settings size={20} />
                 </button>
@@ -206,27 +407,23 @@ const App = () => {
         <>
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    className="sidebar-overlay"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
-            <div className={`
-        fixed left-0 top-0 h-full w-80 bg-white/10 backdrop-blur-xl border-r border-white/20 z-50 transform transition-transform
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:relative lg:translate-x-0 lg:z-auto
-      `}>
-                <div className="p-6">
-                    <div className="flex justify-between items-center mb-8">
-                        <h2 className="text-xl font-bold text-white">Navigation</h2>
+            <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+                <div className="sidebar-content">
+                    <div className="sidebar-header">
+                        <h2 className="sidebar-title">Navigation</h2>
                         <button
                             onClick={() => setSidebarOpen(false)}
-                            className="p-2 text-white/70 hover:text-white lg:hidden"
+                            className="close-btn"
                         >
                             <X size={20} />
                         </button>
                     </div>
 
-                    <nav className="space-y-2">
+                    <nav className="nav">
                         {navigationItems.map((item) => {
                             const Icon = item.icon;
                             return (
@@ -236,32 +433,27 @@ const App = () => {
                                         setActiveView(item.id);
                                         setSidebarOpen(false);
                                     }}
-                                    className={`
-                    w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left
-                    ${activeView === item.id
-                                        ? 'bg-white/20 text-white'
-                                        : 'text-white/70 hover:text-white hover:bg-white/10'
-                                    }
-                  `}
+                                    className={`nav-item ${activeView === item.id ? 'active' : ''}`}
                                 >
                                     <Icon size={18} />
-                                    <span className="font-medium">{item.label}</span>
+                                    <span>{item.label}</span>
                                 </button>
                             );
                         })}
                     </nav>
 
                     {/* Favorite Cities */}
-                    <div className="mt-8">
-                        <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+                    <div className="favorites">
+                        <h3 className="favorites-title">
                             <Heart size={16} />
                             Favorite Cities
                         </h3>
-                        <div className="space-y-2">
+                        <div className="favorites-list">
                             {favorites.slice(0, 5).map((city, index) => (
                                 <button
                                     key={index}
-                                    className="w-full text-left px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/15 rounded-xl text-white hover:bg-white/20 transition-all"
+                                    onClick={() => handleLocationChange({ city, lat: 0, lon: 0 })}
+                                    className="favorite-item"
                                 >
                                     {city}
                                 </button>
@@ -273,331 +465,203 @@ const App = () => {
         </>
     );
 
-    // Search Component
-    const SearchComponent = () => {
-        const [query, setQuery] = useState('');
-
-        return (
-            <div className="mb-8">
-                <div className="flex items-center gap-4 p-4 bg-white/15 backdrop-blur-xl border border-white/20 rounded-full">
-                    <Search size={20} className="text-white/70" />
-                    <input
-                        type="text"
-                        placeholder="Search for a city..."
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/60"
-                    />
-                    {query && (
-                        <button
-                            onClick={() => setQuery('')}
-                            className="text-white/70 hover:text-white"
-                        >
-                            <X size={16} />
-                        </button>
-                    )}
-                </div>
-            </div>
-        );
-    };
-
-    // Widget Components (simplified versions)
-    const CurrentWeatherWidget = () => (
-        <div className="bg-white/15 backdrop-blur-xl border border-white/20 rounded-3xl p-8">
-            <div className="flex items-center gap-2 mb-6 text-white/80">
-                <MapPin size={16} />
-                <span>{weather?.name}, {weather?.sys.country}</span>
-            </div>
-            <div className="flex items-center gap-8 mb-8">
-                <div className="text-6xl">☁️</div>
-                <div>
-                    <div className="text-5xl font-bold text-white mb-2">31°C</div>
-                    <div className="text-white/70 text-lg">Feels like 38°C</div>
-                </div>
-            </div>
-            <div className="text-white/90 text-xl mb-8 capitalize">Broken Clouds</div>
-            <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-4 bg-white/10 rounded-2xl">
-                    <Droplets size={20} className="text-white/80" />
-                    <div>
-                        <div className="text-white/70 text-sm">Humidity</div>
-                        <div className="text-white font-semibold">82%</div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 bg-white/10 rounded-2xl">
-                    <Wind size={20} className="text-white/80" />
-                    <div>
-                        <div className="text-white/70 text-sm">Wind</div>
-                        <div className="text-white font-semibold">2.2 m/s</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
-    const ForecastWidget = () => (
-        <div className="bg-white/15 backdrop-blur-xl border border-white/20 rounded-3xl p-8">
-            <h3 className="text-2xl font-bold text-white mb-6">5-Day Forecast</h3>
-            <div className="space-y-4">
-                {['Today', 'Sun, Aug 4', 'Mon, Aug 5', 'Tue, Aug 6', 'Wed, Aug 7'].map((day, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-white/10 rounded-2xl">
-                        <div className="flex items-center gap-4">
-                            <div className="text-2xl">{index % 2 === 0 ? '🌧️' : '☁️'}</div>
-                            <div>
-                                <div className="text-white font-semibold">{day}</div>
-                                <div className="text-white/70 text-sm">{index % 2 === 0 ? 'Light rain' : 'Cloudy'}</div>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-white font-bold">{32 - index}°</div>
-                            <div className="text-white/60">{28 - index}°</div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-
-    const AirQualityWidget = () => (
-        <div className="bg-white/15 backdrop-blur-xl border border-white/20 rounded-3xl p-8">
-            <h3 className="text-2xl font-bold text-white mb-6">Air Quality</h3>
-            <div className="text-center mb-6">
-                <div className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-2xl font-bold text-white bg-orange-500">
-                    3
-                </div>
-                <div className="text-xl font-semibold text-white mb-2">Moderate</div>
-                <div className="text-white/70">Air Quality Index</div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                {[
-                    { label: 'PM2.5', value: '15.3' },
-                    { label: 'PM10', value: '20.1' },
-                    { label: 'NO₂', value: '13.4' },
-                    { label: 'O₃', value: '54.3' }
-                ].map((pollutant, index) => (
-                    <div key={index} className="p-4 bg-white/10 rounded-2xl">
-                        <div className="text-white/70 text-sm mb-1">{pollutant.label}</div>
-                        <div className="text-white font-bold">{pollutant.value}</div>
-                        <div className="text-white/60 text-xs">μg/m³</div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-
-    const AlertsWidget = () => (
-        <div className="bg-white/15 backdrop-blur-xl border border-white/20 rounded-3xl p-8">
-            <h3 className="text-2xl font-bold text-white mb-6">Weather Alerts</h3>
-            <div className="p-6 bg-red-500/20 border border-red-500/30 rounded-2xl">
-                <div className="flex items-start gap-4">
-                    <AlertTriangle className="text-red-400 mt-1" size={24} />
-                    <div>
-                        <h4 className="text-white font-semibold text-lg mb-2">Heat Wave Warning</h4>
-                        <p className="text-white/80 mb-3">Heat wave conditions are likely to prevail over Delhi and adjoining areas.</p>
-                        <div className="text-white/60 text-sm">
-                            India Meteorological Department
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
-    // Activity Suggestions Widget
-    const ActivitySuggestionsWidget = () => (
-        <div className="bg-white/15 backdrop-blur-xl border border-white/20 rounded-3xl p-8">
-            <h3 className="text-2xl font-bold text-white mb-6">Activity Suggestions</h3>
-            <div className="space-y-4">
-                {[
-                    { activity: 'Indoor Activities', icon: '🏠', reason: 'High temperature outside' },
-                    { activity: 'Stay Hydrated', icon: '💧', reason: 'Heat wave conditions' },
-                    { activity: 'Avoid Outdoor Sports', icon: '⚽', reason: 'Poor air quality' }
-                ].map((suggestion, index) => (
-                    <div key={index} className="flex items-center gap-4 p-4 bg-white/10 rounded-2xl">
-                        <div className="text-2xl">{suggestion.icon}</div>
-                        <div>
-                            <div className="text-white font-semibold">{suggestion.activity}</div>
-                            <div className="text-white/70 text-sm">{suggestion.reason}</div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-
-    // Clothing Suggestions Widget
-    const ClothingSuggestionsWidget = () => (
-        <div className="bg-white/15 backdrop-blur-xl border border-white/20 rounded-3xl p-8">
-            <h3 className="text-2xl font-bold text-white mb-6">What to Wear</h3>
-            <div className="space-y-4">
-                {[
-                    { item: 'Light Cotton Clothes', icon: '👕', temp: '31°C' },
-                    { item: 'Sun Hat', icon: '🧢', reason: 'UV Protection' },
-                    { item: 'Sunglasses', icon: '🕶️', reason: 'Bright sunlight' }
-                ].map((item, index) => (
-                    <div key={index} className="flex items-center gap-4 p-4 bg-white/10 rounded-2xl">
-                        <div className="text-2xl">{item.icon}</div>
-                        <div>
-                            <div className="text-white font-semibold">{item.item}</div>
-                            <div className="text-white/70 text-sm">{item.temp || item.reason}</div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-
     // Main content renderer
     const renderContent = () => {
         if (loading) {
-            return (
-                <div className="flex items-center justify-center h-64">
-                    <div className="text-center">
-                        <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-white text-lg">Loading weather data...</p>
-                    </div>
-                </div>
-            );
+            return <LoadingSpinner />;
         }
+
+        const commonProps = {
+            weather,
+            forecast,
+            hourlyForecast,
+            airQuality,
+            alerts,
+            historicalData,
+            location,
+            tempUnit,
+            isDark,
+            onLocationChange: handleLocationChange,
+            onAddToFavorites: addToFavorites,
+            onRemoveFromFavorites: removeFromFavorites
+        };
 
         switch (activeView) {
             case 'dashboard':
                 return (
-                    <div className={`grid gap-8 ${viewMode === 'grid' ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
-                        <CurrentWeatherWidget />
-                        <ForecastWidget />
-                        <AirQualityWidget />
-                        <AlertsWidget />
-                        <ActivitySuggestionsWidget />
-                        <ClothingSuggestionsWidget />
+                    <div className={`dashboard-grid ${viewMode === 'grid' ? 'grid-mode' : ''}`}>
+                        <Suspense fallback={<LoadingSpinner />}>
+                            <WeatherDisplay {...commonProps} />
+                            <ForecastCards {...commonProps} />
+                            <AirQuality {...commonProps} />
+                            <WeatherAlerts {...commonProps} />
+                            <ActivitySuggestions {...commonProps} />
+                            <ClothingSuggestions {...commonProps} />
+                        </Suspense>
                     </div>
                 );
 
             case 'current':
-                return <CurrentWeatherWidget />;
+                return (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <WeatherDisplay {...commonProps} detailed={true} />
+                    </Suspense>
+                );
+
+            case 'hourly':
+                return (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <ForecastCards {...commonProps} type="hourly" />
+                    </Suspense>
+                );
 
             case 'forecast':
-                return <ForecastWidget />;
+                return (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <ForecastCards {...commonProps} type="daily" />
+                    </Suspense>
+                );
 
             case 'air-quality':
-                return <AirQualityWidget />;
+                return (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <AirQuality {...commonProps} detailed={true} />
+                    </Suspense>
+                );
 
             case 'alerts':
-                return <AlertsWidget />;
+                return (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <WeatherAlerts {...commonProps} />
+                    </Suspense>
+                );
+
+            case 'historical':
+                return (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <HistoricalWeather {...commonProps} />
+                    </Suspense>
+                );
 
             case 'activities':
-                return <ActivitySuggestionsWidget />;
+                return (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <ActivitySuggestions {...commonProps} />
+                    </Suspense>
+                );
 
             case 'clothing':
-                return <ClothingSuggestionsWidget />;
+                return (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <ClothingSuggestions {...commonProps} />
+                    </Suspense>
+                );
+
+            case 'travel':
+                return (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <TravelPlanner {...commonProps} />
+                    </Suspense>
+                );
+
+            case 'comparison':
+                return (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <WeatherComparison {...commonProps} />
+                    </Suspense>
+                );
+
+            case 'widgets':
+                return (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <WeatherWidgets
+                            {...commonProps}
+                            activeWidgets={activeWidgets}
+                            onWidgetToggle={(widgetId) => {
+                                setActiveWidgets(prev =>
+                                    prev.includes(widgetId)
+                                        ? prev.filter(id => id !== widgetId)
+                                        : [...prev, widgetId]
+                                );
+                            }}
+                        />
+                    </Suspense>
+                );
 
             default:
                 return (
-                    <div className="text-center p-8 bg-white/15 backdrop-blur-xl border border-white/20 rounded-3xl">
-                        <h2 className="text-2xl font-bold text-white mb-4">{activeView.charAt(0).toUpperCase() + activeView.slice(1)}</h2>
-                        <p className="text-white/70">This feature is coming soon!</p>
+                    <div className="coming-soon">
+                        <h2>{activeView.replace('-', ' ')}</h2>
+                        <p>This feature is coming soon!</p>
                     </div>
                 );
         }
     };
 
+    // Main App Component
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800">
-            <div className="flex">
-                <Sidebar />
+        <WeatherContext>
+            <ThemeContext value={{ isDark, setIsDark }}>
+                <UserContext>
+                    <div className={`weather-app ${isDark ? 'dark' : 'light'}`}>
+                        <div className="app-layout">
+                            <Sidebar />
 
-                <div className="flex-1 p-4 lg:p-8">
-                    <Header />
-                    <SearchComponent />
+                            <div className="main-content">
+                                <Header />
 
-                    {error && (
-                        <div className="bg-red-500/20 backdrop-blur-xl border border-red-500/30 rounded-2xl p-6 mb-8 text-center">
-                            <p className="text-white mb-4">{error}</p>
-                            <button
-                                onClick={initializeApp}
-                                className="px-6 py-2 bg-white/20 backdrop-blur-xl border border-white/30 rounded-xl text-white hover:bg-white/30 transition-all"
-                            >
-                                Try Again
-                            </button>
-                        </div>
-                    )}
-
-                    <main>
-                        {renderContent()}
-                    </main>
-                </div>
-            </div>
-
-            {/* Settings Modal */}
-            {settingsOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white/20 backdrop-blur-xl border border-white/30 rounded-3xl p-8 max-w-md w-full">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold text-white">Settings</h2>
-                            <button
-                                onClick={() => setSettingsOpen(false)}
-                                className="text-white/70 hover:text-white"
-                            >
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-white font-semibold mb-2">Temperature Unit</label>
-                                <div className="flex gap-2">
-                                    {['C', 'F'].map((unit) => (
-                                        <button
-                                            key={unit}
-                                            onClick={() => setTempUnit(unit)}
-                                            className={`px-4 py-2 rounded-xl transition-all ${
-                                                tempUnit === unit
-                                                    ? 'bg-white/30 text-white'
-                                                    : 'bg-white/10 text-white/70 hover:text-white'
-                                            }`}
-                                        >
-                                            °{unit}
-                                        </button>
-                                    ))}
+                                <div className="search-container">
+                                    <Suspense fallback={<div>Loading search...</div>}>
+                                        <SearchBar
+                                            onSearch={handleSearch}
+                                            onLocationSelect={handleLocationChange}
+                                            placeholder="Search for a city..."
+                                        />
+                                    </Suspense>
                                 </div>
-                            </div>
 
-                            <div>
-                                <label className="flex items-center gap-3">
-                                    <input
-                                        type="checkbox"
-                                        checked={notifications}
-                                        onChange={(e) => setNotifications(e.target.checked)}
-                                        className="w-5 h-5"
-                                    />
-                                    <span className="text-white">Enable Notifications</span>
-                                </label>
-                            </div>
-
-                            <div>
-                                <label className="block text-white font-semibold mb-2">View Mode</label>
-                                <div className="flex gap-2">
-                                    {['grid', 'list'].map((mode) => (
+                                {error && (
+                                    <div className="error-container">
+                                        <p className="error-text">{error}</p>
                                         <button
-                                            key={mode}
-                                            onClick={() => setViewMode(mode)}
-                                            className={`px-4 py-2 rounded-xl transition-all capitalize ${
-                                                viewMode === mode
-                                                    ? 'bg-white/30 text-white'
-                                                    : 'bg-white/10 text-white/70 hover:text-white'
-                                            }`}
+                                            onClick={() => loadWeatherData(location)}
+                                            className="retry-btn"
                                         >
-                                            {mode}
+                                            Try Again
                                         </button>
-                                    ))}
-                                </div>
+                                    </div>
+                                )}
+
+                                <main>
+                                    {renderContent()}
+                                </main>
                             </div>
                         </div>
+
+                        {/* Settings Modal */}
+                        {settingsOpen && (
+                            <Suspense fallback={<LoadingSpinner />}>
+                                <SettingsPanel
+                                    isOpen={settingsOpen}
+                                    onClose={() => setSettingsOpen(false)}
+                                    tempUnit={tempUnit}
+                                    onTempUnitChange={setTempUnit}
+                                    notifications={notifications}
+                                    onNotificationsChange={setNotifications}
+                                    viewMode={viewMode}
+                                    onViewModeChange={setViewMode}
+                                    activeWidgets={activeWidgets}
+                                    onActiveWidgetsChange={setActiveWidgets}
+                                    availableWidgets={availableWidgets}
+                                />
+                            </Suspense>
+                        )}
                     </div>
-                </div>
-            )}
-        </div>
+                </UserContext>
+            </ThemeContext>
+        </WeatherContext>
     );
 };
 
 export default App;
+
