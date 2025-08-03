@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<!-- Navigation -->
+<nav class="navbar">
+    <div class="nav-container">
+        <div class="nav-brand">
+            <i class="fas fa-cloud-sun"></i>
+            <span>WeatherApp</span>
+        </div>
+        <div class="nav-controls">
+            <button id="theme-toggle" class="nav-btn" title="Toggle Theme">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button id="settings-btn" class="nav-btn" title="Settings">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- Main Container -->
+<div class="container">
+    <!-- Search Section -->
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-input-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="city-search" placeholder="Search for a city..." autocomplete="off">
+                <button id="location-btn" class="location-btn" title="Use Current Location">
+                    <i class="fas fa-location-arrow"></i>
+                </button>
+            </div>
+            <div id="search-suggestions" class="search-suggestions"></div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loading" class="loading-container">
+        <div class="weather-spinner">
+            <i class="fas fa-sun spinning"></i>
+        </div>
+        <p>Loading weather data...</p>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error-message" class="error-message">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>Unable to fetch weather data. Please try again.</p>
+    </div>
+
+    <!-- Main Weather Content -->
+    <div id="weather-content" class="weather-content">
+        <!-- Current Weather Card -->
+        <div class="weather-card current-weather-card">
+            <div class="weather-header">
+                <div class="location-info">
+                    <h2 id="current-city">London</h2>
+                    <p id="current-time">Sunday, 3:45 PM</p>
+                </div>
+                <div class="weather-icon-main">
+                    <img id="current-weather-icon" src="" alt="Weather Icon">
+                </div>
+            </div>
+
+            <div class="temperature-section">
+                <div class="main-temp">
+                    <span id="current-temp">22</span>
+                    <span class="temp-unit">°C</span>
+                </div>
+                <div class="feels-like">
+                    <span>Feels like </span>
+                    <span id="feels-like-temp">25</span>
+                    <span class="temp-unit">°C</span>
+                </div>
+            </div>
+
+            <div class="weather-description">
+                <p id="weather-desc">Partly Cloudy</p>
+            </div>
+        </div>
+
+        <!-- Weather Metrics Grid -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-tint"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-label">Humidity</span>
+                    <span class="metric-value" id="humidity">65%</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-wind"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-label">Wind Speed</span>
+                    <span class="metric-value" id="wind-speed">12 km/h</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-thermometer-half"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-label">Pressure</span>
+                    <span class="metric-value" id="pressure">1013 hPa</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-eye"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-label">Visibility</span>
+                    <span class="metric-value" id="visibility">10 km</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-sun"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-label">Sunrise</span>
+                    <span class="metric-value" id="sunrise">06:30</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-moon"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-label">Sunset</span>
+                    <span class="metric-value" id="sunset">20:15</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Air Quality Section -->
+        <div class="weather-card air-quality-card">
+            <h3 class="card-title">
+                <i class="fas fa-leaf"></i>
+                Air Quality
+            </h3>
+            <div class="air-quality-content">
+                <div class="aqi-display">
+                    <div class="aqi-circle" id="aqi-circle">
+                        <span class="aqi-value" id="aqi-value">42</span>
+                        <span class="aqi-label">AQI</span>
+                    </div>
+                    <div class="aqi-info">
+                        <span class="aqi-level" id="aqi-level">Good</span>
+                        <span class="aqi-description" id="aqi-description">Air quality is satisfactory</span>
+                    </div>
+                </div>
+                <div class="pollutants-grid">
+                    <div class="pollutant">
+                        <span class="pollutant-name">PM2.5</span>
+                        <span class="pollutant-value" id="pm25">12</span>
+                    </div>
+                    <div class="pollutant">
+                        <span class="pollutant-name">PM10</span>
+                        <span class="pollutant-value" id="pm10">18</span>
+                    </div>
+                    <div class="pollutant">
+                        <span class="pollutant-name">O₃</span>
+                        <span class="pollutant-value" id="o3">65</span>
+                    </div>
+                    <div class="pollutant">
+                        <span class="pollutant-name">NO₂</span>
+                        <span class="pollutant-value" id="no2">25</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- UV Index -->
+        <div class="weather-card uv-card">
+            <h3 class="card-title">
+                <i class="fas fa-sun"></i>
+                UV Index
+            </h3>
+            <div class="uv-content">
+                <div class="uv-display">
+                    <span class="uv-value" id="uv-value">5</span>
+                    <span class="uv-level" id="uv-level">Moderate</span>
+                </div>
+                <p class="uv-recommendation" id="uv-recommendation">Seek shade during midday hours</p>
+            </div>
+        </div>
+
+        <!-- Hourly Forecast -->
+        <div class="weather-card hourly-card">
+            <h3 class="card-title">
+                <i class="fas fa-clock"></i>
+                24-Hour Forecast
+            </h3>
+            <div class="hourly-scroll" id="hourly-forecast">
+                <!-- Hourly items will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- 5-Day Forecast -->
+        <div class="weather-card forecast-card">
+            <h3 class="card-title">
+                <i class="fas fa-calendar-alt"></i>
+                5-Day Forecast
+            </h3>
+            <div class="forecast-grid" id="forecast-grid">
+                <!-- Forecast items will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Activity Recommendations -->
+        <div class="weather-card recommendations-card">
+            <h3 class="card-title">
+                <i class="fas fa-hiking"></i>
+                Activity Recommendations
+            </h3>
+            <div class="recommendations-grid" id="activity-recommendations">
+                <!-- Activities will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Clothing Suggestions -->
+        <div class="weather-card clothing-card">
+            <h3 class="card-title">
+                <i class="fas fa-tshirt"></i>
+                What to Wear
+            </h3>
+            <div class="clothing-grid" id="clothing-suggestions">
+                <!-- Clothing suggestions will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Historical Weather -->
+        <div class="weather-card historical-card">
+            <h3 class="card-title">
+                <i class="fas fa-history"></i>
+                Historical Weather
+            </h3>
+            <div class="historical-content">
+                <div class="date-selector">
+                    <label for="historical-date">Select Date:</label>
+                    <input type="date" id="historical-date" max="">
+                    <button id="fetch-historical" class="btn-primary">Get Weather</button>
+                </div>
+                <div id="historical-data" class="historical-data">
+                    <!-- Historical data will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Settings</h3>
+            <button class="modal-close" id="close-settings">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="settings-group">
+                <label>Temperature Unit</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="temp-unit" value="celsius" checked>
+                        <span class="radio-custom"></span>
+                        Celsius (°C)
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="temp-unit" value="fahrenheit">
+                        <span class="radio-custom"></span>
+                        Fahrenheit (°F)
+                    </label>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <label>Theme</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="theme" value="light" checked>
+                        <span class="radio-custom"></span>
+                        Light
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="theme" value="dark">
+                        <span class="radio-custom"></span>
+                        Dark
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="theme" value="auto">
+                        <span class="radio-custom"></span>
+                        Auto
+                    </label>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <label for="default-city">Default City</label>
+                <input type="text" id="default-city" placeholder="Enter default city">
+            </div>
+
+            <div class="settings-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="notifications-enabled" checked>
+                    <span class="checkbox-custom"></span>
+                    Enable Notifications
+                </label>
+            </div>
+
+            <div class="settings-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="location-access">
+                    <span class="checkbox-custom"></span>
+                    Allow Location Access
+                </label>
+            </div>
+
+            <div class="settings-group">
+                <label>Visible Metrics</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="metric-checkbox" value="humidity" checked>
+                        <span class="checkbox-custom"></span>
+                        Humidity
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="metric-checkbox" value="windSpeed" checked>
+                        <span class="checkbox-custom"></span>
+                        Wind Speed
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="metric-checkbox" value="pressure" checked>
+                        <span class="checkbox-custom"></span>
+                        Pressure
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="metric-checkbox" value="visibility" checked>
+                        <span class="checkbox-custom"></span>
+                        Visibility
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="metric-checkbox" value="sunrise" checked>
+                        <span class="checkbox-custom"></span>
+                        Sunrise/Sunset
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="save-settings" class="btn-primary">Save Settings</button>
+            <button id="reset-settings" class="btn-secondary">Reset to Default</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notifications -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-content">
+        <p>&copy; 2025 WeatherApp. Weather data provided by OpenWeatherMap.</p>
+        <div class="footer-links">
+            <a href="#" id="about-link">About</a>
+            <a href="#" id="privacy-link">Privacy</a>
+            <a href="#" id="contact-link">Contact</a>
+        </div>
+    </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
