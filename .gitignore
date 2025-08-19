@@ -6,7 +6,7 @@ build/
 !**/src/test/**/build/
 
 # Ignore application.properties with API keys
-src/main/resources/application.properties
+!**/src/main/resources/application.properties
 
 ### STS ###
 .apt_generated
